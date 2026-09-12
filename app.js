@@ -64,6 +64,10 @@ document.addEventListener("DOMContentLoaded", function(event) {
       clear   = document.getElementById("clear"),
       settings= document.getElementById("settings"),
       setMenu = document.getElementById("setMenu"),
+      notesBtn  = document.getElementById("notes"),
+      notesMenu = document.getElementById("notesMenu"),
+      noteList  = document.getElementById("noteList"),
+      newNote   = document.getElementById("newNote"),
       fs      = document.getElementById("fs"),
       lh      = document.getElementById("lh"),
       lw      = document.getElementById("lw"),
@@ -84,23 +88,127 @@ document.addEventListener("DOMContentLoaded", function(event) {
     }
   };
 
-  if(hasStorage() === true){ 
+  var NOTES_PREFIX = "SimpleJot-note:";
+  var currentNote  = "";
 
-    content.addEventListener("keyup", function() {
-      localStorage.setItem("SimpleJot-content", this.value);
+  function getNoteNames() {
+    var names = [];
+    for(var i = 0; i < localStorage.length; i++) {
+      var key = localStorage.key(i);
+      if(key.indexOf(NOTES_PREFIX) === 0) {
+        names.push(key.slice(NOTES_PREFIX.length));
+      }
+    }
+    return names.sort();
+  }
+
+  function saveCurrentNote() {
+    if(currentNote) {
+      localStorage.setItem(NOTES_PREFIX + currentNote, content.value);
+    }
+  }
+
+  function updateCounters() {
+    Countable.once(content, function(counter) {
+      words.innerHTML = counter.words + ":words";
+      chars.innerHTML = counter.all + ":chars";
     });
+  }
 
-    title.addEventListener("keyup", function() {
-      localStorage.setItem("SimpleJot-title", this.value);
+  function openNote(name) {
+    saveCurrentNote();
+    currentNote = name;
+    localStorage.setItem("SimpleJot-current", name);
+    title.value = name;
+    content.value = localStorage.getItem(NOTES_PREFIX + name) || "";
+    updateCounters();
+  }
+
+  function renderNoteList() {
+    noteList.innerHTML = "";
+    var names = getNoteNames();
+    for(var i = 0; i < names.length; i++) {
+      var name = names[i];
+      var li = document.createElement("li");
+      if(name === currentNote) {
+        li.className = "note--current";
+      }
+      var openBtn = document.createElement("button");
+      openBtn.className = "note-open";
+      openBtn.setAttribute("data-note", name);
+      openBtn.appendChild(document.createTextNode(name));
+      openBtn.addEventListener("click", function() {
+        openNote(this.getAttribute("data-note"));
+        notesMenu.classList.remove("notes-menu--open");
+        notesBtn.classList.remove("notes-btn--active");
+      });
+      var delBtn = document.createElement("button");
+      delBtn.className = "note-delete";
+      delBtn.title = "Delete note";
+      delBtn.setAttribute("data-note", name);
+      delBtn.appendChild(document.createTextNode("×"));
+      delBtn.addEventListener("click", function() {
+        trashNote(this.getAttribute("data-note"));
+      });
+      li.appendChild(openBtn);
+      li.appendChild(delBtn);
+      noteList.appendChild(li);
+    }
+  }
+
+  function trashNote(name) {
+    smoke.confirm("This will trash note \"" + name + "\" and clear it from SimpleJot's localstorage data, are you sure?",function(e) {
+      if(e) {
+        localStorage.removeItem(NOTES_PREFIX + name);
+        if(name === currentNote) {
+          currentNote = "";
+          localStorage.removeItem('SimpleJot-current');
+          title.value = "";
+          content.value = "";
+          words.innerHTML = "0:words";
+          chars.innerHTML = "0:chars";
+        }
+        renderNoteList();
+      }}, {
+      reverseButtons: true,
+      ok: "YES",
+      cancel: "NO"
     });
+  };
 
-    if(localStorage.getItem("SimpleJot-title")) {
-      title.value = localStorage.getItem("SimpleJot-title");
+  if(hasStorage() === true){
+    if(localStorage.getItem("SimpleJot-title") !== null || localStorage.getItem("SimpleJot-content") !== null) {
+      var legacyTitle = localStorage.getItem("SimpleJot-title") || "Untitled";
+      localStorage.setItem(NOTES_PREFIX + legacyTitle, localStorage.getItem("SimpleJot-content") || "");
+      localStorage.removeItem("SimpleJot-title");
+      localStorage.removeItem("SimpleJot-content");
+      localStorage.setItem("SimpleJot-current", legacyTitle);
     }
 
-    if(localStorage.getItem("SimpleJot-content")) {
-      content.value = localStorage.getItem("SimpleJot-content");
+    content.addEventListener("input", function() {
+      saveCurrentNote();
+    });
+
+    title.addEventListener("input", function() {
+      var newName = this.value;
+      if(newName && newName !== currentNote && localStorage.getItem(NOTES_PREFIX + newName) === null) {
+        localStorage.setItem(NOTES_PREFIX + newName, currentNote ? (localStorage.getItem(NOTES_PREFIX + currentNote) || "") : content.value);
+        if(currentNote) {
+          localStorage.removeItem(NOTES_PREFIX + currentNote);
+        }
+        currentNote = newName;
+        localStorage.setItem("SimpleJot-current", newName);
+        renderNoteList();
+      }
+    });
+
+    var savedNote = localStorage.getItem("SimpleJot-current");
+    if(savedNote !== null && localStorage.getItem(NOTES_PREFIX + savedNote) !== null) {
+      openNote(savedNote);
+    } else if(getNoteNames().length) {
+      openNote(getNoteNames()[0]);
     }
+    renderNoteList();
 
     if(localStorage.getItem("SimpleJot-theme")) {
       var themeClass = localStorage.getItem("SimpleJot-theme");
@@ -138,7 +246,15 @@ document.addEventListener("DOMContentLoaded", function(event) {
       smoke.prompt("Please give your file a title!\n or just keep the default below.", function(e) {
         if(e) {
           title.value = e;
-          localStorage.setItem("SimpleJot-title", e);
+          if(e !== currentNote && localStorage.getItem(NOTES_PREFIX + e) === null) {
+            localStorage.setItem(NOTES_PREFIX + e, content.value);
+            if(currentNote) {
+              localStorage.removeItem(NOTES_PREFIX + currentNote);
+            }
+            currentNote = e;
+            localStorage.setItem("SimpleJot-current", e);
+            renderNoteList();
+          }
           saveAs(blob, title.value + ".txt");
         }
       }, {
@@ -160,14 +276,18 @@ document.addEventListener("DOMContentLoaded", function(event) {
     if(content.value == "" && title.value == "") {
       smoke.alert("There is nothing to delete!\nGo ahead and write something first.")
     } else {
-      smoke.confirm("This will trash your current text and clear it from SimpleJot's localstorage data, are you sure?",function(e) {
+      smoke.confirm("This will trash your current note and clear it from SimpleJot's localstorage data, are you sure?",function(e) {
         if(e) {
-          localStorage.removeItem('SimpleJot-title')
-          localStorage.removeItem('SimpleJot-content');
+          if(currentNote) {
+            localStorage.removeItem(NOTES_PREFIX + currentNote);
+          }
+          localStorage.removeItem('SimpleJot-current');
+          currentNote = "";
           title.value = "";
           content.value = "";
           words.innerHTML = "0:words";
           chars.innerHTML = "0:chars";
+          renderNoteList();
         }}, {
         reverseButtons: true,
         ok: "YES",
@@ -181,6 +301,42 @@ document.addEventListener("DOMContentLoaded", function(event) {
   settings.addEventListener("click", function() {
     this.classList.toggle("settings-btn--active");
     setMenu.classList.toggle("settings-menu--open");
+    notesBtn.classList.remove("notes-btn--active");
+    notesMenu.classList.remove("notes-menu--open");
+  });
+
+  notesBtn.addEventListener("click", function() {
+    this.classList.toggle("notes-btn--active");
+    notesMenu.classList.toggle("notes-menu--open");
+    setMenu.classList.remove("settings-menu--open");
+    settings.classList.remove("settings-btn--active");
+    renderNoteList();
+  });
+
+  newNote.addEventListener("click", function() {
+    smoke.prompt("Name your new note:", function(e) {
+      if(e) {
+        if(localStorage.getItem(NOTES_PREFIX + e) !== null) {
+          smoke.alert("A note with that name already exists!");
+        } else {
+          saveCurrentNote();
+          localStorage.setItem(NOTES_PREFIX + e, "");
+          currentNote = e;
+          localStorage.setItem("SimpleJot-current", e);
+          renderNoteList();
+          title.value = e;
+          content.value = "";
+          updateCounters();
+          notesMenu.classList.remove("notes-menu--open");
+          notesBtn.classList.remove("notes-btn--active");
+          content.focus();
+        }
+      }
+    }, {
+      reverseButtons: true,
+      ok: "Create",
+      cancel: "Cancel"
+    });
   });
 
   function textSettings() {
@@ -259,6 +415,8 @@ document.addEventListener("DOMContentLoaded", function(event) {
   content.addEventListener("click", function() {
     setMenu.classList.remove("settings-menu--open");
     settings.classList.remove("settings-btn--active");
+    notesMenu.classList.remove("notes-menu--open");
+    notesBtn.classList.remove("notes-btn--active");
   });
  
   start.addEventListener("click", function() {
