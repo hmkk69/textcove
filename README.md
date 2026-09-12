@@ -25,7 +25,7 @@ simplejot/
 ## Credits
 
 Based on the original projects by Paulo Nunes:
-- [SimpleJot](https://github.com/syndicatefx/SimpleJot)
+- [TextPad](https://github.com/syndicatefx/TextPad)
 
 Includes the following open-source libraries:
 - [FileSaver.js](https://github.com/eligrey/FileSaver.js)
