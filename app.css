@@ -730,6 +730,81 @@ input[id*="dialog-input-"] {
   text-align: center;
 }
 
+.note-warning {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1em;
+  background: rgba(255,255,255,.9);
+}
+
+.note-warning[hidden] {
+  display: none;
+}
+
+.night .note-warning {
+  background: rgba(56,56,56,.9);
+}
+
+.note-warning__content {
+  width: 100%;
+  max-width: 30em;
+  padding: 2em 1.5em 1.5em;
+  background: #fff;
+  border: 2px solid #383838;
+  text-align: center;
+}
+
+.night .note-warning__content {
+  background: #383838;
+  border-color: #ccc;
+}
+
+.note-warning h2 {
+  margin-bottom: 1em;
+  font-size: 1em;
+}
+
+.note-warning p {
+  margin-bottom: 1.5em;
+}
+
+.note-warning__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: .75em;
+}
+
+.note-warning__actions button {
+  padding: .5em .75em;
+  border: 2px solid #383838;
+  background: #fff;
+  color: #383838;
+}
+
+.note-warning__actions button:last-child {
+  background: #383838;
+  color: #fff;
+}
+
+.night .note-warning__actions button {
+  border-color: #ccc;
+  background: #383838;
+  color: #ccc;
+}
+
+.night .note-warning__actions button:last-child {
+  background: #ccc;
+  color: #383838;
+}
+
 .queue{
   display: none;
 }

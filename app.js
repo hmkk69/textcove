@@ -75,7 +75,10 @@ document.addEventListener("DOMContentLoaded", function(event) {
       reset   = document.getElementById("reset"),
       info    = document.getElementById("info"),
       chars   = document.getElementById("charCounter"),
-      words   = document.getElementById("wordCounter");
+      words   = document.getElementById("wordCounter"),
+      noteWarning = document.getElementById("noteWarning"),
+      dismissNoteWarning = document.getElementById("dismissNoteWarning"),
+      disableNoteWarning = document.getElementById("disableNoteWarning");
 
   function hasStorage() { 
     var test = 'test';
@@ -89,7 +92,24 @@ document.addEventListener("DOMContentLoaded", function(event) {
   };
 
   var NOTES_PREFIX = "SimpleJot-note:";
+  var NOTE_WARNING_DISMISSED = "SimpleJot-note-warning-dismissed";
   var currentNote  = "";
+
+  function showNoteWarning() {
+    if(localStorage.getItem(NOTE_WARNING_DISMISSED) !== "true") {
+      noteWarning.hidden = false;
+      dismissNoteWarning.focus();
+    }
+  }
+
+  dismissNoteWarning.addEventListener("click", function() {
+    noteWarning.hidden = true;
+  });
+
+  disableNoteWarning.addEventListener("click", function() {
+    localStorage.setItem(NOTE_WARNING_DISMISSED, "true");
+    noteWarning.hidden = true;
+  });
 
   function getNoteNames() {
     var names = [];
@@ -231,6 +251,7 @@ document.addEventListener("DOMContentLoaded", function(event) {
       lw.value = localStorage.getItem("SimpleJot-settings-lw");
     }
 
+    showNoteWarning();
 
 
   }else{ 
