@@ -76,9 +76,8 @@ document.addEventListener("DOMContentLoaded", function(event) {
       info    = document.getElementById("info"),
       chars   = document.getElementById("charCounter"),
       words   = document.getElementById("wordCounter"),
-      noteWarning = document.getElementById("noteWarning"),
-      dismissNoteWarning = document.getElementById("dismissNoteWarning"),
-      disableNoteWarning = document.getElementById("disableNoteWarning");
+      exportBtn     = document.getElementById("exportData"),
+      importBtn     = document.getElementById("importData");
 
   function hasStorage() { 
     var test = 'test';
@@ -92,24 +91,8 @@ document.addEventListener("DOMContentLoaded", function(event) {
   };
 
   var NOTES_PREFIX = "SimpleJot-note:";
-  var NOTE_WARNING_DISMISSED = "SimpleJot-note-warning-dismissed";
+  var NOTE_EXPORT_VERSION = "1.0";
   var currentNote  = "";
-
-  function showNoteWarning() {
-    if(localStorage.getItem(NOTE_WARNING_DISMISSED) !== "true") {
-      noteWarning.hidden = false;
-      dismissNoteWarning.focus();
-    }
-  }
-
-  dismissNoteWarning.addEventListener("click", function() {
-    noteWarning.hidden = true;
-  });
-
-  disableNoteWarning.addEventListener("click", function() {
-    localStorage.setItem(NOTE_WARNING_DISMISSED, "true");
-    noteWarning.hidden = true;
-  });
 
   function getNoteNames() {
     var names = [];
@@ -250,8 +233,6 @@ document.addEventListener("DOMContentLoaded", function(event) {
     if(localStorage.getItem("SimpleJot-settings-lw")) {
       lw.value = localStorage.getItem("SimpleJot-settings-lw");
     }
-
-    showNoteWarning();
 
 
   }else{ 
@@ -450,6 +431,172 @@ document.addEventListener("DOMContentLoaded", function(event) {
   info.addEventListener("click", function() {
     home.classList.add("active");
   });
+
+  exportBtn.addEventListener("click", function() {
+    setMenu.classList.remove("settings-menu--open");
+    settings.classList.remove("settings-btn--active");
+    exportData();
+  });
+
+  importBtn.addEventListener("click", function() {
+    setMenu.classList.remove("settings-menu--open");
+    settings.classList.remove("settings-btn--active");
+    importData();
+  });
+
+  function generateNoteName(baseName) {
+    var names = getNoteNames();
+    var candidate = baseName;
+    var counter = 0;
+    while(names.indexOf(candidate) !== -1) {
+      counter++;
+      candidate = baseName + " (" + counter + ")";
+    }
+    return candidate;
+  }
+
+  function exportData() {
+    var notes = {};
+    var names = getNoteNames();
+    for(var i = 0; i < names.length; i++) {
+      notes[names[i]] = localStorage.getItem(NOTES_PREFIX + names[i]);
+    }
+    var exportObj = {
+      version: NOTE_EXPORT_VERSION,
+      exportedAt: new Date().toISOString(),
+      notes: notes
+    };
+    var exportStr = JSON.stringify(exportObj, null, 2);
+    smoke.prompt("Exported data (click OK to copy to clipboard)", function() {
+      navigator.clipboard.writeText(exportStr).then(function() {
+        smoke.alert("Copied to clipboard!");
+      }).catch(function() {
+        smoke.alert("Failed to copy to clipboard. Use the download option instead.");
+      });
+    }, {
+      reverseButtons: true,
+      value: exportStr,
+      ok: "Copy",
+      cancel: "Download"
+    });
+    var cancelResult = function() {
+      var blob = new Blob([exportStr], {type: "application/json;charset=utf-8"});
+      saveAs(blob, "simplejot-export-" + Date.now() + ".json");
+    };
+    setTimeout(function() {
+      var cancelBtn = document.querySelector('[id^="prompt-cancel"]');
+      if(cancelBtn) {
+        cancelBtn.onclick = function() {
+          smoke.destroy("prompt");
+          cancelResult();
+        };
+      }
+    }, 0);
+  }
+
+  function importData() {
+    smoke.prompt("Paste your imported JSON data here, or select a file from your computer. (Leave empty to import from file)", function(e) {
+      if(e !== null && e.trim() !== "") {
+        processImportedNotes(e);
+      } else {
+        importFromFilePrompt();
+      }
+    }, {
+      reverseButtons: true,
+      ok: "Import from Text",
+      cancel: "Import from File",
+      classname: "import-prompt"
+    });
+    setTimeout(function() {
+      var cancelBtn = document.querySelector('[id^="prompt-cancel"]');
+      if(cancelBtn) {
+        cancelBtn.onclick = function() {
+          smoke.destroy("prompt");
+          importFromFilePrompt();
+        };
+      }
+    }, 0);
+  }
+
+  function importFromFilePrompt() {
+    var input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".json,application/json";
+    input.onchange = function(e) {
+      var file = e.target.files[0];
+      if(file) {
+        var reader = new FileReader();
+        reader.onload = function(ev) {
+          processImportedNotes(ev.target.result);
+        };
+        reader.onerror = function() {
+          smoke.alert("Failed to read file. Please try again.");
+        };
+        reader.readAsText(file);
+      }
+    };
+    input.click();
+  }
+
+  function importFromClipboard() {
+    if(navigator.clipboard && navigator.clipboard.readText) {
+      navigator.clipboard.readText().then(function(text) {
+        processImportedNotes(text);
+      }).catch(function() {
+        smoke.alert("Failed to read from clipboard. Please paste the data manually.");
+      });
+    } else {
+      smoke.alert("Clipboard access is not available. Please paste the data manually.");
+    }
+  }
+
+  function processImportedNotes(dataStr) {
+    var data;
+    try {
+      data = JSON.parse(dataStr);
+    } catch(e) {
+      smoke.alert("Invalid data format. Please provide valid JSON.");
+      return;
+    }
+
+    if(!data || typeof data !== "object" || !data.notes || typeof data.notes !== "object") {
+      smoke.alert("Invalid data structure. Expected an object with a 'notes' property.");
+      return;
+    }
+
+    var noteObj = data.notes;
+    var importedCount = 0;
+    var keys = Object.keys(noteObj);
+
+    for(var i = 0; i < keys.length; i++) {
+      var key = keys[i];
+      var value = noteObj[key];
+      var noteName;
+
+      if(key && key.trim() !== "") {
+        if(localStorage.getItem(NOTES_PREFIX + key) !== null) {
+          noteName = generateNoteName(key);
+        } else {
+          noteName = key;
+        }
+      } else {
+        noteName = generateNoteName("New Note");
+      }
+
+      localStorage.setItem(NOTES_PREFIX + noteName, value || "");
+      importedCount++;
+    }
+
+    if(currentNote === "" || localStorage.getItem(NOTES_PREFIX + currentNote) === null) {
+      var firstNote = getNoteNames()[0];
+      if(firstNote) {
+        openNote(firstNote);
+      }
+    }
+
+    renderNoteList();
+    smoke.alert("Successfully imported " + importedCount + " note(s).");
+  }
 
   Countable.live(content, function(counter) {
     words.innerHTML = counter.words + ":words";

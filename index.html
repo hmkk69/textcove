@@ -40,6 +40,14 @@
 					<button id="theme" title="Toggle Theme"><svg><use xlink:href="#icon-invert-colors"></use></svg></button>
 					<button id="reset" title="Reset to Defaults"><svg><use xlink:href="#icon-refresh"></use></svg></button>
 				</li>
+				<li class="settings-menu__item">
+					<svg><use xlink:href="#icon-file-download"></use></svg>
+					<button id="exportData" title="Export Data">Export</button>
+				</li>
+				<li class="settings-menu__item">
+					<svg><use xlink:href="#icon-file-download"></use></svg>
+					<button id="importData" title="Import Data">Import</button>
+				</li>
 			</ul>
 		</div>
 		<input id="fileName" type="text" placeholder="File name here..">
@@ -62,16 +70,6 @@
 </div>
 <textarea id="fileContent" placeholder="Start Writing..." spellcheck="false"></textarea>
 
-<div id="noteWarning" class="note-warning" role="dialog" aria-modal="true" aria-labelledby="noteWarningTitle" aria-describedby="noteWarningMessage" hidden>
-	<div class="note-warning__content">
-		<h2 id="noteWarningTitle">Warning</h2>
-		<p id="noteWarningMessage">You must set a name for the note before it can be saved. If you don't set a name, you will lose all the content.</p>
-		<div class="note-warning__actions">
-			<button id="dismissNoteWarning" type="button">Dismiss this warning</button>
-			<button id="disableNoteWarning" type="button">Disable this warning permanently</button>
-		</div>
-	</div>
-</div>
 
 <footer role="contentinfo">
 	<button id="info" class="info-btn" title="Info"><svg><use xlink:href="#icon-info-outline"></use></svg></button>
