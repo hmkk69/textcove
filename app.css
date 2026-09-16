@@ -11,7 +11,13 @@ LICENSE: MIT
 
 */
 
-@import url(https://fonts.googleapis.com/css?family=Roboto+Mono);
+@font-face {
+  font-family: "IBM Plex Mono";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("IBMPlexMono-Regular.woff2") format("woff2");
+}
 
 *,*:before,*:after {
   -webkit-box-sizing: border-box;
@@ -34,7 +40,7 @@ html.night {
 
 body {
   height: 100%;
-  font-family: "Roboto Mono",monospace;
+  font-family: "IBM Plex Mono", "Roboto Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 1em;
   line-height: 1.7;
   padding: 1em 0;
@@ -661,7 +667,7 @@ footer {
 }
 
 .smoke {
-  font-family: "Roboto Mono", monospace;
+  font-family: "IBM Plex Mono", "Roboto Mono", ui-monospace, Menlo, Consolas, monospace;
   font-size: .875em;
   line-height: 1.6;
 }
@@ -813,5 +819,45 @@ input[id*="dialog-input-"] {
   position: relative;
   left: 49px;
   margin-right: 6px;
+}
+
+.offline-tip {
+  text-align: center;
+  font-size: 80%;
+  background: rgba(160, 217, 46, 0.15);
+  border: 1px dashed #a0d92e;
+  border-radius: 4px;
+  padding: .5em .75em;
+}
+
+.net-status {
+  position: absolute;
+  bottom: .9em;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 75%;
+  color: #999;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.net-status .dot {
+  display: inline-block;
+  width: .6em;
+  height: .6em;
+  border-radius: 50%;
+  background: #a0d92e;
+  margin-right: .4em;
+  vertical-align: baseline;
+}
+
+.net-status.is-offline .dot {
+  background: #fd971f;
+}
+
+@media (max-width: 48em) {
+  .net-status .tip-text {
+    display: none;
+  }
 }
 

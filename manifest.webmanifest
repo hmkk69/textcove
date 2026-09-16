@@ -1,0 +1,18 @@
+{
+  "name": "SimpleJot",
+  "short_name": "SimpleJot",
+  "description": "A simple offline-ready notepad. Your text lives in your browser.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

@@ -8,6 +8,14 @@
 	<meta name="title" content="SimpleJot">
 	<meta name="description" content="A simple online notepad, no WYSIWYG, no fancy stuff, just write. The text will live in your browser until you decide to delete or download it.">
 	<meta name="author" content="Paulo Nunes">
+	<meta name="theme-color" content="#ffffff">
+	<meta name="mobile-web-app-capable" content="yes">
+	<meta name="apple-mobile-web-app-capable" content="yes">
+	<meta name="apple-mobile-web-app-status-bar-style" content="default">
+	<meta name="apple-mobile-web-app-title" content="SimpleJot">
+	<link rel="manifest" href="manifest.webmanifest">
+	<link rel="icon" type="image/svg+xml" href="icon.svg">
+	<link rel="apple-touch-icon" href="icon.svg">
 	<link href="app.css" rel="stylesheet">
 </head>
 <body>
@@ -63,6 +71,7 @@
 		<svg><use xlink:href="#logo"></use></svg>
 		<h1>SimpleJot</h1>
 		<p>A simple online notepad. No distractions, no unnecessary features.The text will live in your browser until you decide to delete it, come back anytime to continue writing. You can also download your text as a .txt file after you're finished!</p>
+		<p class="offline-tip">Tip: You can use SimpleJot when offline!</p>
 		<button id="start">Start Writing</button>
 		<p class="footnote">Source code: <a href="//github.com/2nul/simplejot">2nul/simplejot</a></p>
 		<p class="footnote">Many thanks to <a href="//github.com/syndicatefx">Paulo Nunes</a> for the original <a href="//github.com/syndicatefx/TextPad">TextPad</a> project!</p>
@@ -73,6 +82,7 @@
 
 <footer role="contentinfo">
 	<button id="info" class="info-btn" title="Info"><svg><use xlink:href="#icon-info-outline"></use></svg></button>
+	<span id="netStatus" class="net-status" title="Offline ready: SimpleJot works without internet"><span class="dot"></span><span id="netStatusText">Offline ready</span><span class="tip-text"> &middot; Tip: You can use SimpleJot when offline!</span></span>
 	<ul class="counter">
 		<li id="charCounter"></li>
 		<li id="wordCounter"></li>
@@ -80,6 +90,26 @@
 </footer>
 
 <script src="app.js"></script>
+<script>
+(function() {
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", function() {
+      navigator.serviceWorker.register("sw.js").catch(function() {});
+    });
+  }
+  function updateNetStatus() {
+    var el = document.getElementById("netStatus");
+    var text = document.getElementById("netStatusText");
+    if (!el || !text) return;
+    var online = navigator.onLine;
+    el.classList.toggle("is-offline", !online);
+    text.textContent = online ? "Offline ready" : "Offline mode";
+  }
+  window.addEventListener("online", updateNetStatus);
+  window.addEventListener("offline", updateNetStatus);
+  updateNetStatus();
+})();
+</script>
 
 </body>
 </html>
