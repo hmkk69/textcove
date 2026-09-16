@@ -92,25 +92,135 @@ document.addEventListener("DOMContentLoaded", function(event) {
   };
 
   var notesPrefix = "SimpleJot-note:";
+  var recoveryPrefix = "SimpleJot-recovery:";
   var note_exportversion = "1.0";
   var defaultNoteBase = "New note";
   var currentNote  = "";
+  var idbName = "SimpleJot";
+  var idbStore = "notes";
+  var SAVE_DELAY = 250;
+  var RECOVERY_THROTTLE = 1500;
+  var _dbPromise = null;
+  var namesCache = [];
+  var saveTimer = null;
+  var lastRecoveryWrite = 0;
 
-  function getNoteNames() {
-    var names = [];
-    for(var i = 0; i < localStorage.length; i++) {
-      var key = localStorage.key(i);
-      if(key.indexOf(notesPrefix) === 0) {
-        names.push(key.slice(notesPrefix.length));
-      }
-    }
-    return names.sort();
+  function idbOpen() {
+    if(_dbPromise) return _dbPromise;
+    _dbPromise = new Promise(function(res, rej) {
+      try {
+        var req = indexedDB.open(idbName, 1);
+        req.onupgradeneeded = function() {
+          if(!req.result.objectStoreNames.contains(idbStore)) {
+            req.result.createObjectStore(idbStore);
+          }
+        };
+        req.onsuccess = function() { res(req.result); };
+        req.onerror = function() { rej(req.error); };
+        req.onblocked = function() {};
+      } catch(e) { rej(e); }
+    });
+    return _dbPromise;
+  }
+  function idbTx(mode, fn) {
+    return idbOpen().then(function(db) {
+      return new Promise(function(res, rej) {
+        var tx;
+        try { tx = db.transaction(idbStore, mode); }
+        catch(e) { rej(e); return; }
+        var out;
+        try { out = fn(tx.objectStore(idbStore)); }
+        catch(e) { rej(e); return; }
+        tx.oncomplete = function() { res(out && out.result !== undefined ? out.result : out); };
+        tx.onerror = function() { rej(tx.error); };
+        tx.onabort = function() { rej(tx.error || new Error("IDB aborted")); };
+      });
+    });
+  }
+  function idbGet(name) {
+    return idbTx("readonly", function(s) { return s.get(name); }).then(function(v) {
+      if(v === undefined || v === null) return null;
+      if(typeof v === "object" && v !== null && "c" in v) return v.c;
+      return String(v);
+    });
+  }
+  function idbPut(name, value) {
+    var rec = { c: value || "", u: Date.now() };
+    return idbTx("readwrite", function(s) { return s.put(rec, name); }).then(function() {
+      if(namesCache.indexOf(name) === -1) namesCache.push(name);
+    });
+  }
+  function idbDel(name) {
+    return idbTx("readwrite", function(s) { return s.delete(name); }).then(function() {
+      var i = namesCache.indexOf(name);
+      if(i !== -1) namesCache.splice(i, 1);
+    });
+  }
+  function idbGetAllKeys() {
+    return idbOpen().then(function(db) {
+      return new Promise(function(res, rej) {
+        try {
+          var tx = db.transaction(idbStore, "readonly");
+          var store = tx.objectStore(idbStore);
+          if(store.getAllKeys) {
+            var rq = store.getAllKeys();
+            rq.onsuccess = function() { res(rq.result || []); };
+            rq.onerror = function() { rej(rq.error); };
+          } else {
+            var keys = [];
+            var cur = store.openCursor();
+            cur.onsuccess = function() {
+              var c = cur.result;
+              if(c) { keys.push(c.key); c.continue(); }
+              else res(keys);
+            };
+            cur.onerror = function() { rej(cur.error); };
+          }
+        } catch(e) { rej(e); }
+      });
+    });
+  }
+  function refreshNames() {
+    return idbGetAllKeys().then(function(keys) {
+      namesCache = (keys || []).slice().sort();
+      return namesCache;
+    });
   }
 
+  function getNoteNames() {
+    return namesCache.slice().sort();
+  }
+
+  function writeRecoverySync() {
+    if(!currentNote) return;
+    try {
+      localStorage.setItem(recoveryPrefix + currentNote, content.value);
+      lastRecoveryWrite = Date.now();
+    } catch(e) {}
+  }
+  function scheduleRecovery() {
+    if(Date.now() - lastRecoveryWrite > RECOVERY_THROTTLE) writeRecoverySync();
+  }
+  function clearRecovery(name) {
+    try { localStorage.removeItem(recoveryPrefix + (name || currentNote)); } catch(e) {}
+  }
+  function flushSave() {
+    if(saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
+    if(!currentNote) return Promise.resolve();
+    var val = content.value;
+    return idbPut(currentNote, val).then(function() {
+      clearRecovery(currentNote);
+    }).catch(function() {
+      writeRecoverySync();
+    });
+  }
+  function requestSave() {
+    if(saveTimer) clearTimeout(saveTimer);
+    saveTimer = setTimeout(flushSave, SAVE_DELAY);
+    scheduleRecovery();
+  }
   function saveCurrentNote() {
-    if(currentNote) {
-      localStorage.setItem(notesPrefix + currentNote, content.value);
-    }
+    requestSave();
   }
 
   function generateNoteName(baseName) {
@@ -124,14 +234,15 @@ document.addEventListener("DOMContentLoaded", function(event) {
     return candidate;
   }
   function ensureCurrentNote() {
-    if(!currentNote) {
-      var autoName = generateNoteName(defaultNoteBase);
-      currentNote = autoName;
-      localStorage.setItem(notesPrefix + autoName, content.value);
-      localStorage.setItem("SimpleJot-current", autoName);
-      title.value = autoName;
+    if(currentNote) return Promise.resolve(currentNote);
+    var autoName = generateNoteName(defaultNoteBase);
+    currentNote = autoName;
+    try { localStorage.setItem("SimpleJot-current", autoName); } catch(e) {}
+    title.value = autoName;
+    return idbPut(autoName, content.value).then(function() {
       renderNoteList();
-    }
+      return autoName;
+    });
   }
 
   function updateCounters() {
@@ -141,13 +252,37 @@ document.addEventListener("DOMContentLoaded", function(event) {
     });
   }
 
+  var openSeq = 0;
   function openNote(name) {
-    saveCurrentNote();
+    var mySeq = ++openSeq;
+    var prevName = currentNote;
+    var prevVal = content.value;
+    if(prevName && prevName !== name) {
+      if(saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
+      idbPut(prevName, prevVal).then(function() {
+        clearRecovery(prevName);
+      }).catch(function() {
+        try { localStorage.setItem(recoveryPrefix + prevName, prevVal); } catch(e) {}
+      });
+    } else if(saveTimer) {
+      clearTimeout(saveTimer); saveTimer = null;
+    }
     currentNote = name;
-    localStorage.setItem("SimpleJot-current", name);
+    try { localStorage.setItem("SimpleJot-current", name); } catch(e) {}
     title.value = name;
-    content.value = localStorage.getItem(notesPrefix + name) || "";
-    updateCounters();
+    var rec = null;
+    try { rec = localStorage.getItem(recoveryPrefix + name); } catch(e) {}
+    if(rec !== null && rec !== undefined) {
+      content.value = rec;
+      updateCounters();
+      idbPut(name, rec).then(function() { clearRecovery(name); }).catch(function() {});
+      return Promise.resolve(name);
+    }
+    return idbGet(name).then(function(v) {
+      if(mySeq !== openSeq || currentNote !== name) return;
+      content.value = (v === null || v === undefined) ? "" : v;
+      updateCounters();
+    });
   }
 
   function renderNoteList() {
@@ -183,18 +318,21 @@ document.addEventListener("DOMContentLoaded", function(event) {
   }
 
   function trashNote(name) {
-    smoke.confirm("This will trash note \"" + name + "\" and clear it from SimpleJot's localstorage data, are you sure?",function(e) {
+    smoke.confirm("This will trash note \"" + name + "\" and clear it from SimpleJot's local data, are you sure?",function(e) {
       if(e) {
-        localStorage.removeItem(notesPrefix + name);
-        if(name === currentNote) {
-          currentNote = "";
-          localStorage.removeItem('SimpleJot-current');
-          title.value = "";
-          content.value = "";
-          words.innerHTML = "0:words";
-          chars.innerHTML = "0:chars";
-        }
-        renderNoteList();
+        if(saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
+        idbDel(name).then(function() {
+          clearRecovery(name);
+          if(name === currentNote) {
+            currentNote = "";
+            try { localStorage.removeItem('SimpleJot-current'); } catch(err) {}
+            title.value = "";
+            content.value = "";
+            words.innerHTML = "0:words";
+            chars.innerHTML = "0:chars";
+          }
+          renderNoteList();
+        });
       }}, {
       reverseButtons: true,
       ok: "YES",
@@ -202,14 +340,40 @@ document.addEventListener("DOMContentLoaded", function(event) {
     });
   };
 
+  function migrateFromLocalStorage() {
+    var batch = [];
+    try {
+      if(localStorage.getItem("SimpleJot-title") !== null || localStorage.getItem("SimpleJot-content") !== null) {
+        var legacyTitle = localStorage.getItem("SimpleJot-title") || "Untitled";
+        var legacyContent = localStorage.getItem("SimpleJot-content") || "";
+        batch.push({ k: legacyTitle, v: legacyContent });
+        localStorage.removeItem("SimpleJot-title");
+        localStorage.removeItem("SimpleJot-content");
+        try { localStorage.setItem("SimpleJot-current", legacyTitle); } catch(e) {}
+      }
+      var toRemove = [];
+      for(var i = 0; i < localStorage.length; i++) {
+        var key = localStorage.key(i);
+        if(key && key.indexOf(notesPrefix) === 0) {
+          batch.push({ k: key.slice(notesPrefix.length), v: localStorage.getItem(key) || "" });
+          toRemove.push(key);
+        }
+      }
+      var chain = Promise.resolve();
+      batch.forEach(function(item) {
+        chain = chain.then(function() { return idbPut(item.k, item.v); });
+      });
+      return chain.then(function() {
+        toRemove.forEach(function(k) { try { localStorage.removeItem(k); } catch(e) {} });
+        try { localStorage.setItem("SimpleJot-migrated-idb-v1", "1"); } catch(e) {}
+      });
+    } catch(e) { return Promise.resolve(); }
+  }
+
   if(hasStorage() === true){
-    if(localStorage.getItem("SimpleJot-title") !== null || localStorage.getItem("SimpleJot-content") !== null) {
-      var legacyTitle = localStorage.getItem("SimpleJot-title") || "Untitled";
-      localStorage.setItem(notesPrefix + legacyTitle, localStorage.getItem("SimpleJot-content") || "");
-      localStorage.removeItem("SimpleJot-title");
-      localStorage.removeItem("SimpleJot-content");
-      localStorage.setItem("SimpleJot-current", legacyTitle);
-    }
+    try {
+      if(navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(function() {});
+    } catch(e) {}
 
     content.addEventListener("input", function() {
       if(!currentNote) {
@@ -218,21 +382,34 @@ document.addEventListener("DOMContentLoaded", function(event) {
         }
         ensureCurrentNote();
       } else {
-        saveCurrentNote();
+        requestSave();
       }
     });
 
+    function handleHide() { writeRecoverySync(); flushSave(); }
+    document.addEventListener("visibilitychange", function() {
+      if(document.hidden) handleHide();
+    });
+    window.addEventListener("pagehide", handleHide);
+    window.addEventListener("beforeunload", function() { writeRecoverySync(); });
+
     title.addEventListener("input", function() {
       var newName = this.value;
-      if(newName && newName !== currentNote && localStorage.getItem(notesPrefix + newName) === null) {
-        localStorage.setItem(notesPrefix + newName, currentNote ? (localStorage.getItem(notesPrefix + currentNote) || "") : content.value);
-        if(currentNote) {
-          localStorage.removeItem(notesPrefix + currentNote);
-        }
-        currentNote = newName;
-        localStorage.setItem("SimpleJot-current", newName);
+      if(!newName || newName === currentNote) return;
+      if(getNoteNames().indexOf(newName) !== -1) return;
+      var oldName = currentNote;
+      var val = content.value;
+      if(saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
+      currentNote = newName;
+      try { localStorage.setItem("SimpleJot-current", newName); } catch(e) {}
+      var p = oldName ? idbGet(oldName).then(function(oldVal) {
+        var c = (val !== "" ? val : (oldVal || ""));
+        return idbPut(newName, c).then(function() { return idbDel(oldName); });
+      }) : idbPut(newName, val);
+      p.then(function() {
+        if(oldName) clearRecovery(oldName);
         renderNoteList();
-      }
+      });
     });
     title.addEventListener("change", function() {
       if(this.value.trim() === "") {
@@ -241,31 +418,51 @@ document.addEventListener("DOMContentLoaded", function(event) {
         }
       }
     });
-    (function migrateUnnamedNotes() {
-      var unnamed = getNoteNames().filter(function(n) { return n.trim() === ""; });
-      for(var i = 0; i < unnamed.length; i++) {
-        var oldKey = notesPrefix + unnamed[i];
-        var fixedName = generateNoteName(defaultNoteBase);
-        localStorage.setItem(notesPrefix + fixedName, localStorage.getItem(oldKey) || "");
-        localStorage.removeItem(oldKey);
-        if(localStorage.getItem("SimpleJot-current") === unnamed[i]) {
-          localStorage.setItem("SimpleJot-current", fixedName);
+    function bootFromIDB() {
+      var migrated = null;
+      try { migrated = localStorage.getItem("SimpleJot-migrated-idb-v1"); } catch(e) {}
+      var start = migrated ? Promise.resolve() : migrateFromLocalStorage();
+      return start.then(refreshNames).then(function() {
+        var unnamed = getNoteNames().filter(function(n) { return n.trim() === ""; });
+        var chain = Promise.resolve();
+        unnamed.forEach(function(bad) {
+          chain = chain.then(function() {
+            var fixedName = generateNoteName(defaultNoteBase);
+            return idbGet(bad).then(function(v) {
+              return idbPut(fixedName, v || "").then(function() { return idbDel(bad); }).then(function() {
+                try {
+                  if(localStorage.getItem("SimpleJot-current") === bad) {
+                    localStorage.setItem("SimpleJot-current", fixedName);
+                  }
+                } catch(e) {}
+                clearRecovery(bad);
+              });
+            });
+          });
+        });
+        return chain;
+      }).then(refreshNames).then(function() {
+        if(!getNoteNames().length) {
+          var firstNote = generateNoteName(defaultNoteBase);
+          return idbPut(firstNote, "").then(function() {
+            try { localStorage.setItem("SimpleJot-current", firstNote); } catch(e) {}
+          }).then(refreshNames);
         }
-      }
-    })();
-    if(!getNoteNames().length) {
-      var firstNote = generateNoteName(defaultNoteBase);
-      localStorage.setItem(notesPrefix + firstNote, "");
-      localStorage.setItem("SimpleJot-current", firstNote);
+      }).then(function() {
+        var savedNote = null;
+        try { savedNote = localStorage.getItem("SimpleJot-current"); } catch(e) {}
+        if(savedNote !== null && getNoteNames().indexOf(savedNote) !== -1) {
+          return openNote(savedNote);
+        } else if(getNoteNames().length) {
+          return openNote(getNoteNames()[0]);
+        }
+      }).then(function() {
+        renderNoteList();
+      }).catch(function() {
+        renderNoteList();
+      });
     }
-
-    var savedNote = localStorage.getItem("SimpleJot-current");
-    if(savedNote !== null && localStorage.getItem(notesPrefix + savedNote) !== null) {
-      openNote(savedNote);
-    } else if(getNoteNames().length) {
-      openNote(getNoteNames()[0]);
-    }
-    renderNoteList();
+    bootFromIDB();
 
     if(localStorage.getItem("SimpleJot-theme")) {
       var themeClass = localStorage.getItem("SimpleJot-theme");
@@ -304,26 +501,29 @@ document.addEventListener("DOMContentLoaded", function(event) {
         return;
       }
       if(content.value !== "") {
-        ensureCurrentNote();
-        blob = new Blob([content.value || content.placeholder],{type: "text/plain;charset=utf-8"});
-        saveAs(blob, title.value + ".txt");
+        ensureCurrentNote().then(function() {
+          var b = new Blob([content.value || content.placeholder],{type: "text/plain;charset=utf-8"});
+          saveAs(b, title.value + ".txt");
+        });
         return;
       }
 
       smoke.prompt("Please give your file a title!\n or just keep the default below.", function(e) {
         if(e) {
           var finalName = e;
-          if(localStorage.getItem(notesPrefix + finalName) !== null) {
+          if(getNoteNames().indexOf(finalName) !== -1) {
             finalName = generateNoteName(e);
           }
           title.value = finalName;
           if(finalName !== currentNote) {
-            localStorage.setItem(notesPrefix + finalName, content.value);
-            if(currentNote) {
-              localStorage.removeItem(notesPrefix + currentNote);
-            }
+            (function(oldName, newN, val) {
+              idbPut(newN, val).then(function() {
+                clearRecovery(newN);
+                if(oldName) { idbDel(oldName).then(function() { clearRecovery(oldName); }); }
+              });
+            })(currentNote, finalName, content.value);
             currentNote = finalName;
-            localStorage.setItem("SimpleJot-current", finalName);
+            try { localStorage.setItem("SimpleJot-current", finalName); } catch(err) {}
             renderNoteList();
           }
           saveAs(blob, title.value + ".txt");
@@ -347,18 +547,22 @@ document.addEventListener("DOMContentLoaded", function(event) {
     if(content.value == "" && title.value == "") {
       smoke.alert("There is nothing to delete!\nGo ahead and write something first.")
     } else {
-      smoke.confirm("This will trash your current note and clear it from SimpleJot's localstorage data, are you sure?",function(e) {
+      smoke.confirm("This will trash your current note and clear it from SimpleJot's local data, are you sure?",function(e) {
         if(e) {
-          if(currentNote) {
-            localStorage.removeItem(notesPrefix + currentNote);
-          }
-          localStorage.removeItem('SimpleJot-current');
-          currentNote = "";
-          title.value = "";
-          content.value = "";
-          words.innerHTML = "0:words";
-          chars.innerHTML = "0:chars";
-          renderNoteList();
+          if(saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
+          var doomed = currentNote;
+          var done = function() {
+            if(doomed) clearRecovery(doomed);
+            try { localStorage.removeItem('SimpleJot-current'); } catch(err) {}
+            currentNote = "";
+            title.value = "";
+            content.value = "";
+            words.innerHTML = "0:words";
+            chars.innerHTML = "0:chars";
+            renderNoteList();
+          };
+          if(doomed) { idbDel(doomed).then(done).catch(done); }
+          else done();
         }}, {
         reverseButtons: true,
         ok: "YES",
@@ -381,19 +585,25 @@ document.addEventListener("DOMContentLoaded", function(event) {
     notesMenu.classList.toggle("notes-menu--open");
     setMenu.classList.remove("settings-menu--open");
     settings.classList.remove("settings-btn--active");
-    renderNoteList();
+    refreshNames().then(renderNoteList).catch(renderNoteList);
   });
 
   newNote.addEventListener("click", function() {
-    saveCurrentNote();
+    var prevName = currentNote, prevVal = content.value;
+    if(prevName) {
+      if(saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
+      idbPut(prevName, prevVal).then(function() { clearRecovery(prevName); }).catch(function() {
+        try { localStorage.setItem(recoveryPrefix + prevName, prevVal); } catch(e) {}
+      });
+    }
     var autoName = generateNoteName(defaultNoteBase);
-    localStorage.setItem(notesPrefix + autoName, "");
     currentNote = autoName;
-    localStorage.setItem("SimpleJot-current", autoName);
-    renderNoteList();
+    try { localStorage.setItem("SimpleJot-current", autoName); } catch(e) {}
     title.value = autoName;
     content.value = "";
     updateCounters();
+    idbPut(autoName, "").then(function() { renderNoteList(); });
+    renderNoteList();
     notesMenu.classList.remove("notes-menu--open");
     notesBtn.classList.remove("notes-btn--active");
     content.focus();
@@ -503,55 +713,38 @@ document.addEventListener("DOMContentLoaded", function(event) {
   });
 
   function exportData() {
-    var notes = {};
-    var names = getNoteNames();
-    for(var i = 0; i < names.length; i++) {
-      notes[names[i]] = localStorage.getItem(notesPrefix + names[i]);
-    }
-    var exportObj = {
-      version: note_exportversion,
-      exportedAt: new Date().toISOString(),
-      notes: notes
-    };
-    var exportStr = JSON.stringify(exportObj, null, 2);
-    smoke.prompt("Exported data (click OK to copy to clipboard)", function() {
-      navigator.clipboard.writeText(exportStr).then(function() {
-        smoke.alert("Copied to clipboard!");
-      }).catch(function() {
-        smoke.alert("Failed to copy to clipboard. Use the download option instead.");
+    flushSave().then(function() {
+      var notes = {};
+      var names = getNoteNames();
+      var chain = Promise.resolve();
+      names.forEach(function(n) {
+        chain = chain.then(function() {
+          return idbGet(n).then(function(v) { notes[n] = (v === null ? "" : v); });
+        });
       });
-    }, {
-      reverseButtons: true,
-      value: exportStr,
-      ok: "Copy",
-      cancel: "Download"
-    });
-    var cancelResult = function() {
+      return chain.then(function() { return notes; });
+    }).then(function(notes) {
+      var exportObj = {
+        version: note_exportversion,
+        exportedAt: new Date().toISOString(),
+        notes: notes
+      };
+      var exportStr = JSON.stringify(exportObj, null, 2);
       var blob = new Blob([exportStr], {type: "application/json;charset=utf-8"});
       saveAs(blob, "simplejot-export-" + Date.now() + ".json");
-    };
-    setTimeout(function() {
-      var cancelBtn = document.querySelector('[id^="prompt-cancel"]');
-      if(cancelBtn) {
-        cancelBtn.onclick = function() {
-          smoke.destroy("prompt");
-          cancelResult();
-        };
-      }
-    }, 0);
+    });
   }
 
   function importData() {
-    smoke.prompt("Paste your imported JSON data here, or select a file from your computer. (Leave empty to import from file)", function(e) {
+    smoke.prompt("Select a file from your computer.", function(e) {
       if(e !== null && e.trim() !== "") {
         processImportedNotes(e);
       } else {
         importFromFilePrompt();
       }
     }, {
-      reverseButtons: true,
-      ok: "Import from Text",
-      cancel: "Import from File",
+      ok: "Select file",
+      cancel: "Cancel",
       classname: "import-prompt"
     });
     setTimeout(function() {
@@ -568,7 +761,6 @@ document.addEventListener("DOMContentLoaded", function(event) {
   function importFromFilePrompt() {
     var input = document.createElement("input");
     input.type = "file";
-    input.accept = ".json,application/json";
     input.onchange = function(e) {
       var file = e.target.files[0];
       if(file) {
@@ -615,34 +807,33 @@ document.addEventListener("DOMContentLoaded", function(event) {
     var importedCount = 0;
     var keys = Object.keys(noteObj);
 
-    for(var i = 0; i < keys.length; i++) {
-      var key = keys[i];
-      var value = noteObj[key];
-      var noteName;
-
-      if(key && key.trim() !== "") {
-        if(localStorage.getItem(notesPrefix + key) !== null) {
-          noteName = generateNoteName(key);
+    var chain = Promise.resolve();
+    keys.forEach(function(key) {
+      chain = chain.then(function() {
+        var value = noteObj[key];
+        var noteName;
+        if(key && key.trim() !== "") {
+          if(getNoteNames().indexOf(key) !== -1) {
+            noteName = generateNoteName(key);
+          } else {
+            noteName = key;
+          }
         } else {
-          noteName = key;
+          noteName = generateNoteName(defaultNoteBase);
         }
-      } else {
-        noteName = generateNoteName(defaultNoteBase);
+        return idbPut(noteName, value || "").then(function() { importedCount++; });
+      });
+    });
+    chain.then(function() {
+      if(currentNote === "" || getNoteNames().indexOf(currentNote) === -1) {
+        var firstNote = getNoteNames()[0];
+        if(firstNote) {
+          openNote(firstNote);
+        }
       }
-
-      localStorage.setItem(notesPrefix + noteName, value || "");
-      importedCount++;
-    }
-
-    if(currentNote === "" || localStorage.getItem(notesPrefix + currentNote) === null) {
-      var firstNote = getNoteNames()[0];
-      if(firstNote) {
-        openNote(firstNote);
-      }
-    }
-
-    renderNoteList();
-    smoke.alert("Successfully imported " + importedCount + " note(s).");
+      renderNoteList();
+      smoke.alert("Successfully imported " + importedCount + " note(s).");
+    });
   }
 
   Countable.live(content, function(counter) {

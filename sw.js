@@ -1,6 +1,6 @@
 // offline mode
 
-var cacheName = "simplejot-v1";
+var cacheName = "simplejot-v4";
 var assets = [
   "./",
   "./index.html",
@@ -51,6 +51,31 @@ self.addEventListener("fetch", function (event) {
         return response;
       }).catch(function () {
         return caches.match("./index.html", { ignoreSearch: true });
+      })
+    );
+    return;
+  }
+  var url = new URL(event.request.url);
+  var path = url.pathname;
+  var isAppShell = url.origin === self.location.origin && (
+    path === "/" ||
+    path.slice(-1) === "/" ||
+    path.slice(-10) === "index.html" ||
+    path.slice(-6) === "app.js" ||
+    path.slice(-7) === "app.css"
+  );
+  if (isAppShell) {
+    event.respondWith(
+      fetch(event.request).then(function (response) {
+        if (response && response.status === 200) {
+          var copy = response.clone();
+          caches.open(cacheName).then(function (cache) {
+            cache.put(event.request, copy);
+          });
+        }
+        return response;
+      }).catch(function () {
+        return caches.match(event.request, { ignoreSearch: false });
       })
     );
     return;
