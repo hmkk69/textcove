@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "build": "node scripts/build.mjs",
+    "dev": "python -m http.server 8080",
     "test": "node --test tests/app.test.mjs tests/pwa.test.mjs",
     "check": "node --check app.js && node --check sw.js && node --check scripts/build.mjs"
   },

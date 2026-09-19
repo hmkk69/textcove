@@ -17,9 +17,10 @@ A fast, private, offline-ready notepad. No accounts, no tracking, no WYSIWYG clu
 - Multiple notes with search, sort (last edited / A-Z), pins, snippets and edit dates
 - Markdown preview: headings, **bold**, *italic*, `code`, fenced code blocks, checklists, quotes
 - One-click `.txt` download, full JSON export, JSON file import, drag-and-drop import
-- Share via Web Share API, share links (`?share=Note+name`), copy-to-clipboard, print stylesheet
+- Copy-to-clipboard and print stylesheet
 - Keyboard shortcuts: `Ctrl+S` save, `Ctrl+N` new note, `Ctrl+K` search, `Tab` indent
-- Offline-first PWA: installable, custom icons, shortcuts, share target
+- Offline-first PWA: installable, custom icons, app shortcuts
+- Online, the page checks for a newer service worker on load and on reconnect, then swaps to it automatically; offline, the newest cached copy is served
 - Theming: manual toggle plus automatic `prefers-color-scheme` support
 - Accessible: labelled controls, native `<dialog>`, live-region save status, `prefers-reduced-motion`
 
@@ -47,7 +48,7 @@ simplejot/
 ├── app.css             # Styling, responsive, print, reduced-motion
 ├── app.js              # Application logic, no dependencies
 ├── sw.js               # Service worker (cache name stamped by npm run build)
-├── manifest.webmanifest# PWA manifest with icons, shortcuts, share target
+├── manifest.webmanifest# PWA manifest with icons and app shortcuts
 ├── icon.svg            # Source icon
 ├── icon-192.png        # PWA icon
 ├── icon-512.png        # PWA icon
@@ -62,6 +63,7 @@ simplejot/
 ## Development
 
 ```bash
+npm run dev     # serve locally at http://localhost:8080 (required: service workers and PWA install do not work over file://)
 npm run build   # stamp a content hash into the service-worker cache name
 npm test        # run the test suites
 npm run check   # syntax-check the JavaScript

@@ -43,7 +43,6 @@ document.addEventListener("DOMContentLoaded", function() {
   const previewBtn = document.getElementById("previewToggle");
   const preview = document.getElementById("preview");
   const previewBody = document.getElementById("previewBody");
-  const shareBtn = document.getElementById("shareNote");
   const copyBtn = document.getElementById("copyNote");
   const dialog = document.getElementById("appDialog");
   const dialogMessage = document.getElementById("dialogMessage");
@@ -225,13 +224,13 @@ document.addEventListener("DOMContentLoaded", function() {
   const recoveryPrefix = "SimpleJot-recovery:";
   const noteExportVersion = "1.0";
   const defaultNoteBase = "New note";
-  const PIN_KEY = "SimpleJot-pins";
-  const META_KEY = "SimpleJot-meta";
+  const pinKey = "SimpleJot-pins";
+  const metaKey = "SimpleJot-meta";
   let currentNote = "";
   const idbName = "SimpleJot";
   const idbStore = "notes";
   const SAVE_DELAY = 250;
-  const RECOVERY_THROTTLE = 1500;
+  const recoveryThrottle = 1500;
   let _dbPromise = null;
   let namesCache = [];
   let saveTimer = null;
@@ -242,30 +241,85 @@ document.addEventListener("DOMContentLoaded", function() {
   let meta = {};
 
   try {
-    pins = JSON.parse(safeGet(PIN_KEY) || "[]");
+    pins = JSON.parse(safeGet(pinKey) || "[]");
     if (!Array.isArray(pins)) pins = [];
   } catch (err) {
     pins = [];
   }
 
   try {
-    meta = JSON.parse(safeGet(META_KEY) || "{}");
+    meta = JSON.parse(safeGet(metaKey) || "{}");
     if (!meta || typeof meta !== "object") meta = {};
   } catch (err) {
     meta = {};
   }
 
   function savePins() {
-    if (!safeSet(PIN_KEY, JSON.stringify(pins))) markError("Save failed: storage is full");
+    if (!safeSet(pinKey, JSON.stringify(pins))) markError("Save failed: storage is full");
   }
 
   function saveMeta() {
-    safeSet(META_KEY, JSON.stringify(meta));
+    safeSet(metaKey, JSON.stringify(meta));
   }
 
   function touchMeta(name) {
     meta[name] = Date.now();
     saveMeta();
+  }
+
+  let useIdb = typeof indexedDB !== "undefined";
+
+  function lsKeys() {
+    const keys = [];
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.indexOf(notesPrefix) === 0) keys.push(key.slice(notesPrefix.length));
+      }
+    } catch (err) {}
+    return keys;
+  }
+
+  function lsGetItem(name) {
+    try {
+      const v = localStorage.getItem(notesPrefix + name);
+      return v === null ? null : v;
+    } catch (err) {
+      return null;
+    }
+  }
+
+  function lsPutItem(name, value) {
+    try {
+      localStorage.setItem(notesPrefix + name, value || "");
+    } catch (err) {
+      return Promise.reject(err);
+    }
+    if (namesCache.indexOf(name) === -1) namesCache.push(name);
+    touchMeta(name);
+    return Promise.resolve();
+  }
+
+  function lsDelItem(name) {
+    try {
+      localStorage.removeItem(notesPrefix + name);
+    } catch (err) {}
+    dropFromCaches(name);
+    return Promise.resolve();
+  }
+
+  function dropFromCaches(name) {
+    const i = namesCache.indexOf(name);
+    if (i !== -1) namesCache.splice(i, 1);
+    const pi = pins.indexOf(name);
+    if (pi !== -1) {
+      pins.splice(pi, 1);
+      savePins();
+    }
+    if (meta[name] !== undefined) {
+      delete meta[name];
+      saveMeta();
+    }
   }
 
   function idbOpen() {
@@ -303,38 +357,44 @@ document.addEventListener("DOMContentLoaded", function() {
   }
 
   function idbGet(name) {
+    if (!useIdb) return Promise.resolve(lsGetItem(name));
     return idbTx("readonly", function(s) { return s.get(name); }).then(function(v) {
       if (v === undefined || v === null) return null;
       if (typeof v === "object" && v !== null && "c" in v) return v.c;
       return String(v);
+    }).catch(function(err) {
+      if (isQuotaError(err)) throw err;
+      useIdb = false;
+      return lsGetItem(name);
     });
   }
 
   function idbPut(name, value) {
+    if (!useIdb) return lsPutItem(name, value);
     const rec = { c: value || "", u: Date.now() };
     return idbTx("readwrite", function(s) { return s.put(rec, name); }).then(function() {
       if (namesCache.indexOf(name) === -1) namesCache.push(name);
       touchMeta(name);
+    }).catch(function(err) {
+      if (isQuotaError(err)) throw err;
+      useIdb = false;
+      return lsPutItem(name, value);
     });
   }
 
   function idbDel(name) {
+    if (!useIdb) return lsDelItem(name);
     return idbTx("readwrite", function(s) { return s.delete(name); }).then(function() {
-      const i = namesCache.indexOf(name);
-      if (i !== -1) namesCache.splice(i, 1);
-      const pi = pins.indexOf(name);
-      if (pi !== -1) {
-        pins.splice(pi, 1);
-        savePins();
-      }
-      if (meta[name] !== undefined) {
-        delete meta[name];
-        saveMeta();
-      }
+      dropFromCaches(name);
+    }).catch(function(err) {
+      if (isQuotaError(err)) throw err;
+      useIdb = false;
+      return lsDelItem(name);
     });
   }
 
   function idbGetAllKeys() {
+    if (!useIdb) return Promise.resolve(lsKeys());
     return idbOpen().then(function(db) {
       return new Promise(function(res, rej) {
         try {
@@ -356,6 +416,10 @@ document.addEventListener("DOMContentLoaded", function() {
           }
         } catch (err) { rej(err); }
       });
+    }).catch(function(err) {
+      if (isQuotaError(err)) throw err;
+      useIdb = false;
+      return lsKeys();
     });
   }
 
@@ -376,7 +440,7 @@ document.addEventListener("DOMContentLoaded", function() {
   }
 
   function scheduleRecovery() {
-    if (Date.now() - lastRecoveryWrite > RECOVERY_THROTTLE) {
+    if (Date.now() - lastRecoveryWrite > recoveryThrottle) {
       if (writeRecoverySync()) lastRecoveryWrite = Date.now();
     }
   }
@@ -724,16 +788,6 @@ document.addEventListener("DOMContentLoaded", function() {
     previewBtn.setAttribute("aria-pressed", previewOpen ? "true" : "false");
     if (previewOpen) refreshPreview();
     else content.focus();
-  }
-
-  function buildShareLink() {
-    try {
-      const url = new URL(window.location.href);
-      url.search = "?share=" + encodeURIComponent(currentNote);
-      return url.toString();
-    } catch (err) {
-      return window.location.href;
-    }
   }
 
   function readFileAsText(file) {
@@ -1118,21 +1172,6 @@ document.addEventListener("DOMContentLoaded", function() {
           params = new URLSearchParams(window.location.search);
         } catch (err) {}
         if (!params) return;
-        const sharedText = params.get("text");
-        if (sharedText) {
-          const base = (params.get("note") || params.get("share") || defaultNoteBase).trim() || defaultNoteBase;
-          const noteName = getNoteNames().indexOf(base) !== -1 ? generateNoteName(base) : base;
-          currentNote = noteName;
-          safeSet("SimpleJot-current", noteName);
-          title.value = noteName;
-          content.value = sharedText;
-          updateCounters();
-          idbPut(noteName, sharedText).then(function() {
-            markSaved();
-            renderNoteList();
-          }).catch(function() {});
-          return;
-        }
         const action = params.get("action");
         if (action === "new") {
           createNewNote();
@@ -1336,36 +1375,6 @@ document.addEventListener("DOMContentLoaded", function() {
 
   previewBtn.addEventListener("click", function() {
     togglePreview();
-  });
-
-  shareBtn.addEventListener("click", function() {
-    if (content.value === "" && !currentNote) {
-      showAlert("There is nothing to share yet. Write something first.");
-      return;
-    }
-    const shareData = {
-      title: currentNote || "SimpleJot note",
-      text: content.value.slice(0, 4000),
-      url: currentNote ? buildShareLink() : window.location.href
-    };
-    if (navigator.share) {
-      try {
-        const p = navigator.share(shareData);
-        if (p && p.catch) p.catch(function() {});
-      } catch (err) {}
-      return;
-    }
-    const link = buildShareLink();
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(link).then(function() {
-        setStatus("saved", "Link copied");
-        showAlert("Sharing is not available here, so a link to this note was copied instead.");
-      }).catch(function() {
-        showAlert("Sharing is not available here. Copy this link instead: " + link);
-      });
-    } else {
-      showAlert("Sharing is not available here. Copy this link instead: " + link);
-    }
   });
 
   copyBtn.addEventListener("click", function() {

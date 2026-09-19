@@ -754,9 +754,6 @@ header nav {
 
 .editor {
   height: 100%;
-  max-width: 90ch;
-  margin: 0 auto;
-  padding: 0 1em;
 }
 
 .preview {
@@ -953,7 +950,6 @@ header nav {
 }
 
 .preview-btn--active svg,
-.share-btn:hover svg,
 .copy-btn:hover svg {
   fill: #61cce0;
   transform: scale(1.12);
@@ -1006,6 +1002,7 @@ header nav {
 }
 
 .app-dialog {
+  margin: auto;
   border: 2px solid #383838;
   border-radius: 14px;
   padding: 1.5em;
@@ -1100,7 +1097,6 @@ header nav {
   #appDialog,
   #fileInput,
   #previewToggle,
-  #shareNote,
   #copyNote {
     display: none;
   }
@@ -1108,7 +1104,6 @@ header nav {
     padding: 0;
   }
   .editor {
-    max-width: none;
     padding: 0;
   }
   textarea {

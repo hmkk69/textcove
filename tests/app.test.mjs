@@ -48,6 +48,12 @@ describe("correctness fixes", () => {
     assert.ok(app.includes('title.addEventListener("change", commitRename)'), "rename must run on change");
     assert.ok(!app.includes('title.addEventListener("input"'), "rename must not run on input");
   });
+  it("falls back to localStorage when IndexedDB is blocked", () => {
+    assert.ok(app.includes("let useIdb"), "missing storage backend flag");
+    assert.ok(app.includes("function lsPutItem"), "missing localStorage put fallback");
+    assert.ok(app.includes("function lsGetItem"), "missing localStorage get fallback");
+    assert.ok(app.includes("function lsKeys"), "missing localStorage keys fallback");
+  });
   it("shows save status and handles quota errors", () => {
     assert.ok(app.includes("saveStatus"), "missing save status element wiring");
     assert.ok(app.includes("QuotaExceededError"), "missing quota handling");
@@ -72,9 +78,10 @@ describe("notes, markdown, shortcuts, sharing", () => {
     assert.ok(app.includes('"s"') || app.includes("'s'"), "missing Ctrl+S");
     assert.ok(app.includes("selectionStart"), "missing Tab indent handling");
   });
-  it("supports sharing with a link fallback", () => {
-    assert.ok(app.includes("navigator.share"), "missing Web Share API");
-    assert.ok(app.includes("?share="), "missing share link");
+  it("has no share feature left", () => {
+    assert.ok(!app.includes("shareNote"), "share button wiring remains");
+    assert.ok(!app.includes("navigator.share"), "Web Share code remains");
+    assert.ok(!app.includes("buildShareLink"), "share link builder remains");
   });
 });
 

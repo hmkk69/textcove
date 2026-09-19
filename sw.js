@@ -1,5 +1,5 @@
 "use strict";
-const cacheName = "simplejot-47043199";
+const cacheName = "simplejot-be1bc1f7";
 const assets = [
   "./",
   "./index.html",
@@ -37,6 +37,12 @@ self.addEventListener("activate", function(event) {
       return self.clients.claim();
     })
   );
+});
+
+self.addEventListener("message", function(event) {
+  if (event.data && event.data.type === "SKIP_WAITING") {
+    self.skipWaiting();
+  }
 });
 
 self.addEventListener("fetch", function(event) {
