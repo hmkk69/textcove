@@ -1,0 +1,12 @@
+{
+  "name": "simplejot",
+  "version": "5.0.0",
+  "description": "A fast, private, offline-ready notepad. Vanilla HTML/CSS/JS, no dependencies.",
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "test": "node --test tests/app.test.mjs tests/pwa.test.mjs",
+    "check": "node --check app.js && node --check sw.js && node --check scripts/build.mjs"
+  },
+  "license": "SEE LICENSE IN LICENSE"
+}

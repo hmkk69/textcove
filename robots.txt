@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://jot.2nul.dpdns.org/sitemap.xml

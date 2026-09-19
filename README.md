@@ -1,38 +1,77 @@
 # SimpleJot
 
-A simple note-taking application combining the best features of SimpleJot.
+[![PWA](https://img.shields.io/badge/PWA-ready-brightgreen)](https://jot.2nul.dpdns.org/)
+[![No dependencies](https://img.shields.io/badge/dependencies-zero-blue)](package.json)
+[![Tests](https://img.shields.io/badge/tests-35%20passing-brightgreen)](tests/)
+[![License](https://img.shields.io/badge/license-non--commercial-lightgrey)](LICENSE)
 
-## Technology Stack
+A fast, private, offline-ready notepad. No accounts, no tracking, no WYSIWYG clutter. Your notes live in your browser (IndexedDB + localStorage recovery) until you decide to delete or download them.
 
-- HTML5, CSS3, Vanilla JavaScript
-- LocalStorage for persistent storage
-- FileSaver.js for file downloads
-- Smoke.js for beautiful dialogs/alerts
-- Countable.js for accurate text statistics
-- IBM Plex Mono font for excellent readability
+**Live demo:** https://jot.2nul.dpdns.org/
 
-## File Structure
+![SimpleJot screenshot](screenshot-wide.png)
+
+## Features
+
+- Instant autosave with a visible status (`Saving...` / `Saved • 12:03` / error states)
+- Multiple notes with search, sort (last edited / A-Z), pins, snippets and edit dates
+- Markdown preview: headings, **bold**, *italic*, `code`, fenced code blocks, checklists, quotes
+- One-click `.txt` download, full JSON export, JSON file import, drag-and-drop import
+- Share via Web Share API, share links (`?share=Note+name`), copy-to-clipboard, print stylesheet
+- Keyboard shortcuts: `Ctrl+S` save, `Ctrl+N` new note, `Ctrl+K` search, `Tab` indent
+- Offline-first PWA: installable, custom icons, shortcuts, share target
+- Theming: manual toggle plus automatic `prefers-color-scheme` support
+- Accessible: labelled controls, native `<dialog>`, live-region save status, `prefers-reduced-motion`
+
+## Keyboard shortcuts
+
+| Keys | Action |
+| --- | --- |
+| `Ctrl`/`Cmd` + `S` | Download current note as `.txt` |
+| `Ctrl`/`Cmd` + `N` | New note |
+| `Ctrl`/`Cmd` + `K` | Search notes |
+| `Tab` (in editor) | Indent two spaces |
+
+## Technology stack
+
+- HTML5, CSS3, vanilla JavaScript — zero runtime dependencies
+- IndexedDB for notes, localStorage for settings and crash recovery
+- Native `<dialog>`, native `a[download]` + Blob URLs, hand-written word counter
+- IBM Plex Mono for readability
+
+## File structure
 
 ```
 simplejot/
-├── index.html          # Main HTML structure
-├── app.css             # Combined styling
-├── app.js              # Combined application logic
-├── IBMPlexMono-Regular.woff2  # Font file
-└── README.md           # This file
+├── index.html          # App shell, SEO tags, native dialog
+├── app.css             # Styling, responsive, print, reduced-motion
+├── app.js              # Application logic, no dependencies
+├── sw.js               # Service worker (cache name stamped by npm run build)
+├── manifest.webmanifest# PWA manifest with icons, shortcuts, share target
+├── icon.svg            # Source icon
+├── icon-192.png        # PWA icon
+├── icon-512.png        # PWA icon
+├── icon-maskable-512.png
+├── robots.txt
+├── sitemap.xml
+├── package.json        # build / test / check scripts
+├── scripts/build.mjs   # Stamps a content hash into sw.js
+└── tests/              # node:test suites (no extra dependencies)
+```
+
+## Development
+
+```bash
+npm run build   # stamp a content hash into the service-worker cache name
+npm test        # run the test suites
+npm run check   # syntax-check the JavaScript
 ```
 
 ## Credits
 
-Based on the original projects by Paulo Nunes:
-- [TextPad](https://github.com/syndicatefx/TextPad)
-
-Includes the following open-source libraries:
-- [FileSaver.js](https://github.com/eligrey/FileSaver.js)
-- [Smoke.js](https://github.com/hxgf/smoke.js)
-- [Countable.js](https://github.com/RadLikeWhoa/Countable)
+Based on the original [TextPad](https://github.com/syndicatefx/TextPad) project by Paulo Nunes.
+The previously vendored FileSaver.js, Smoke.js and Countable.js helpers were replaced with small native implementations.
 
 ## License
-[SimpleJot Non-Commercial Attribution License](https://github.com/2nul/simplejot/blob/main/LICENSE)
 
-SimpleJot combines the beautiful interface and settings of SimpleJot with the multiple note management capabilities of Notebook to create a versatile daily note-taking tool.
+[SimpleJot Non-Commercial Attribution License](https://github.com/2nul/simplejot/blob/main/LICENSE)

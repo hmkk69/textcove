@@ -1,185 +1,364 @@
-/*  
-*  original author
-Author: Paulo Nunes
-Original: https://github.com/syndicatefx/textpad/blob/master/app.js ( Thanksssss to Paulo Nunes for the original code )
-Filename: app.js
-LICENSE: MIT
-
-Code modified and cleaned up by 2nul
-https://github.com/2nul/simplejot
-
-LICENSE: MIT
-
-*/
-
-// I would like to extend my thanks to all the authors!
-
-// https://github.com/eligrey/FileSaver.js
-var saveAs=saveAs||function(r){"use strict";if("undefined"==typeof navigator||!/MSIE [1-9]\./.test(navigator.userAgent)){var e=r.document,o=function(){return r.URL||r.webkitURL||r},t=e.createElementNS("http://www.w3.org/1999/xhtml","a"),f="download"in t,n=function(r){var e=new MouseEvent("click");r.dispatchEvent(e)},i=/Version\/[\d\.]+.*Safari/.test(navigator.userAgent),a=r.webkitRequestFileSystem,d=r.requestFileSystem||a||r.mozRequestFileSystem,C=function(e){(r.setImmediate||r.setTimeout)(function(){throw e},0)},m="application/octet-stream",S=0,h=4e4,g=function(r){var e=function(){"string"==typeof r?o().revokeObjectURL(r):r.remove()};setTimeout(e,h)},c=function(r,e,o){e=[].concat(e);for(var t=e.length;t--;){var f=r["on"+e[t]];if("function"==typeof f)try{f.call(r,o||r)}catch(n){C(n)}}},u=function(r){return/^\s*(?:text\/\S*|application\/xml|\S*\/\S*\+xml)\s*;.*charset\s*=\s*utf-8/i.test(r.type)?new Blob([String.fromCharCode(65279),r],{type:r.type}):r},s=function(e,C,h){h||(e=u(e));var s,l,v,p=this,w=e.type,y=!1,x=function(){c(p,"writestart progress write writeend".split(" "))},R=function(){if(l&&i&&"undefined"!=typeof FileReader){var t=new FileReader;return t.onloadend=function(){var r=t.result;l.location.href="data:attachment/file"+r.slice(r.search(/[,;]/)),p.readyState=p.DONE,x()},t.readAsDataURL(e),void(p.readyState=p.INIT)}if((y||!s)&&(s=o().createObjectURL(e)),l)l.location.href=s;else{var f=r.open(s,"_blank");void 0===f&&i&&(r.location.href=s)}p.readyState=p.DONE,x(),g(s)},O=function(r){return function(){return p.readyState!==p.DONE?r.apply(this,arguments):void 0}},b={create:!0,exclusive:!1};return p.readyState=p.INIT,C||(C="download"),f?(s=o().createObjectURL(e),void setTimeout(function(){t.href=s,t.download=C,n(t),x(),g(s),p.readyState=p.DONE})):(r.chrome&&w&&w!==m&&(v=e.slice||e.webkitSlice,e=v.call(e,0,e.size,m),y=!0),a&&"download"!==C&&(C+=".download"),(w===m||a)&&(l=r),d?(S+=e.size,void d(r.TEMPORARY,S,O(function(r){r.root.getDirectory("saved",b,O(function(r){var o=function(){r.getFile(C,b,O(function(r){r.createWriter(O(function(o){o.onwriteend=function(e){l.location.href=r.toURL(),p.readyState=p.DONE,c(p,"writeend",e),g(r)},o.onerror=function(){var r=o.error;r.code!==r.ABORT_ERR&&R()},"writestart progress write abort".split(" ").forEach(function(r){o["on"+r]=p["on"+r]}),o.write(e),p.abort=function(){o.abort(),p.readyState=p.DONE},p.readyState=p.WRITING}),R)}),R)};r.getFile(C,{create:!1},O(function(r){r.remove(),o()}),O(function(r){r.code===r.NOT_FOUND_ERR?o():R()}))}),R)}),R)):void R())},l=s.prototype,v=function(r,e,o){return new s(r,e,o)};return"undefined"!=typeof navigator&&navigator.msSaveOrOpenBlob?function(r,e,o){return o||(r=u(r)),navigator.msSaveOrOpenBlob(r,e||"download")}:(l.abort=function(){var r=this;r.readyState=r.DONE,c(r,"abort")},l.readyState=l.INIT=0,l.WRITING=1,l.DONE=2,l.error=l.onwritestart=l.onprogress=l.onwrite=l.onabort=l.onerror=l.onwriteend=null,v)}}("undefined"!=typeof self&&self||"undefined"!=typeof window&&window||this.content);"undefined"!=typeof module&&module.exports?module.exports.saveAs=saveAs:"undefined"!=typeof define&&null!==define&&null!==define.amd&&define([],function(){return saveAs});
-
-// https://github.com/hxgf/smoke.js
-(function(e,t){var n={smoketimeout:[],init:false,zindex:1e3,i:0,bodyload:function(e){var r=t.createElement("div");r.setAttribute("id","smoke-out-"+e);r.className="smoke-base";r.style.zIndex=n.zindex;n.zindex++;t.body.appendChild(r)},newdialog:function(){var t=(new Date).getTime();t=Math.random(1,99)+t;if(!n.init){n.listen(e,"load",function(){n.bodyload(t)})}else{n.bodyload(t)}return t},forceload:function(){},build:function(t,r){n.i++;r.stack=n.i;t=t.replace(/\n/g,"<br />");t=t.replace(/\r/g,"<br />");var i="",s="OK",o="Cancel",u="",a="",f;if(r.type==="prompt"){i='<div class="dialog-prompt">'+'<input id="dialog-input-'+r.newid+'" type="text" '+(r.params.value?'value="'+r.params.value+'"':"")+" />"+"</div>"}if(r.params.ok){s=r.params.ok}if(r.params.cancel){o=r.params.cancel}if(r.params.classname){u=r.params.classname}if(r.type!=="signal"){a='<div class="dialog-buttons">';if(r.type==="alert"){a+='<button id="alert-ok-'+r.newid+'">'+s+"</button>"}else if(r.type==="quiz"){if(r.params.button_1){a+='<button class="quiz-button" id="'+r.type+"-ok1-"+r.newid+'">'+r.params.button_1+"</button>"}if(r.params.button_2){a+='<button class="quiz-button" id="'+r.type+"-ok2-"+r.newid+'">'+r.params.button_2+"</button>"}if(r.params.button_3){a+='<button class="quiz-button" id="'+r.type+"-ok3-"+r.newid+'">'+r.params.button_3+"</button>"}if(r.params.button_cancel){a+='<button id="'+r.type+"-cancel-"+r.newid+'" class="cancel">'+r.params.button_cancel+"</button>"}}else if(r.type==="prompt"||r.type==="confirm"){if(r.params.reverseButtons){a+='<button id="'+r.type+"-ok-"+r.newid+'">'+s+"</button>"+'<button id="'+r.type+"-cancel-"+r.newid+'" class="cancel">'+o+"</button>"}else{a+='<button id="'+r.type+"-cancel-"+r.newid+'" class="cancel">'+o+"</button>"+'<button id="'+r.type+"-ok-"+r.newid+'">'+s+"</button>"}}a+="</div>"}f='<div id="smoke-bg-'+r.newid+'" class="smokebg"></div>'+'<div class="dialog smoke '+u+'">'+'<div class="dialog-inner">'+t+i+a+"</div>"+"</div>";if(!n.init){n.listen(e,"load",function(){n.finishbuild(t,r,f)})}else{n.finishbuild(t,r,f)}},finishbuild:function(e,r,i){var s=t.getElementById("smoke-out-"+r.newid);s.className="smoke-base smoke-visible  smoke-"+r.type;s.innerHTML=i;while(s.innerHTML===""){s.innerHTML=i}if(n.smoketimeout[r.newid]){clearTimeout(n.smoketimeout[r.newid])}n.listen(t.getElementById("smoke-bg-"+r.newid),"click",function(){n.destroy(r.type,r.newid);if(r.type==="prompt"||r.type==="confirm"||r.type==="quiz"){r.callback(false)}else if(r.type==="alert"&&typeof r.callback!=="undefined"){r.callback()}});switch(r.type){case"alert":n.finishbuildAlert(e,r,i);break;case"confirm":n.finishbuildConfirm(e,r,i);break;case"quiz":n.finishbuildQuiz(e,r,i);break;case"prompt":n.finishbuildPrompt(e,r,i);break;case"signal":n.finishbuildSignal(e,r,i);break;default:throw"Unknown type: "+r.type}},finishbuildAlert:function(r,i,s){n.listen(t.getElementById("alert-ok-"+i.newid),"click",function(){n.destroy(i.type,i.newid);if(typeof i.callback!=="undefined"){i.callback()}});t.onkeyup=function(t){if(!t){t=e.event}if(t.keyCode===13||t.keyCode===32||t.keyCode===27){n.destroy(i.type,i.newid);if(typeof i.callback!=="undefined"){i.callback()}}}},finishbuildConfirm:function(r,i,s){n.listen(t.getElementById("confirm-cancel-"+i.newid),"click",function(){n.destroy(i.type,i.newid);i.callback(false)});n.listen(t.getElementById("confirm-ok-"+i.newid),"click",function(){n.destroy(i.type,i.newid);i.callback(true)});t.onkeyup=function(t){if(!t){t=e.event}if(t.keyCode===13||t.keyCode===32){n.destroy(i.type,i.newid);i.callback(true)}else if(t.keyCode===27){n.destroy(i.type,i.newid);i.callback(false)}}},finishbuildQuiz:function(r,i,s){var o,u,a;n.listen(t.getElementById("quiz-cancel-"+i.newid),"click",function(){n.destroy(i.type,i.newid);i.callback(false)});if(o=t.getElementById("quiz-ok1-"+i.newid))n.listen(o,"click",function(){n.destroy(i.type,i.newid);i.callback(o.innerHTML)});if(u=t.getElementById("quiz-ok2-"+i.newid))n.listen(u,"click",function(){n.destroy(i.type,i.newid);i.callback(u.innerHTML)});if(a=t.getElementById("quiz-ok3-"+i.newid))n.listen(a,"click",function(){n.destroy(i.type,i.newid);i.callback(a.innerHTML)});t.onkeyup=function(t){if(!t){t=e.event}if(t.keyCode===27){n.destroy(i.type,i.newid);i.callback(false)}}},finishbuildPrompt:function(r,i,s){var o=t.getElementById("dialog-input-"+i.newid);setTimeout(function(){o.focus();o.select()},100);n.listen(t.getElementById("prompt-cancel-"+i.newid),"click",function(){n.destroy(i.type,i.newid);i.callback(false)});n.listen(t.getElementById("prompt-ok-"+i.newid),"click",function(){n.destroy(i.type,i.newid);i.callback(o.value)});t.onkeyup=function(t){if(!t){t=e.event}if(t.keyCode===13){n.destroy(i.type,i.newid);i.callback(o.value)}else if(t.keyCode===27){n.destroy(i.type,i.newid);i.callback(false)}}},finishbuildSignal:function(r,i,s){t.onkeyup=function(t){if(!t){t=e.event}if(t.keyCode===27){n.destroy(i.type,i.newid);if(typeof i.callback!=="undefined"){i.callback()}}};n.smoketimeout[i.newid]=setTimeout(function(){n.destroy(i.type,i.newid);if(typeof i.callback!=="undefined"){i.callback()}},i.timeout)},destroy:function(e,r){var i=t.getElementById("smoke-out-"+r);if(e!=="quiz"){var s=t.getElementById(e+"-ok-"+r)}var o=t.getElementById(e+"-cancel-"+r);i.className="smoke-base";if(s){n.stoplistening(s,"click",function(){});t.onkeyup=null}if(e==="quiz"){var u=t.getElementsByClassName("quiz-button");for(var a=0;a<u.length;a++){n.stoplistening(u[a],"click",function(){});t.onkeyup=null}}if(o){n.stoplistening(o,"click",function(){})}n.i=0;i.innerHTML=""},alert:function(e,t,r){if(typeof r!=="object"){r=false}var i=n.newdialog();n.build(e,{type:"alert",callback:t,params:r,newid:i})},signal:function(e,t,r){if(typeof r!=="object"){r=false}var i=5e3;if(r.duration!=="undefined"){i=r.duration}var s=n.newdialog();n.build(e,{type:"signal",callback:t,timeout:i,params:r,newid:s})},confirm:function(e,t,r){if(typeof r!=="object"){r=false}var i=n.newdialog();n.build(e,{type:"confirm",callback:t,params:r,newid:i})},quiz:function(e,t,r){if(typeof r!=="object"){r=false}var i=n.newdialog();n.build(e,{type:"quiz",callback:t,params:r,newid:i})},prompt:function(e,t,r){if(typeof r!=="object"){r=false}var i=n.newdialog();return n.build(e,{type:"prompt",callback:t,params:r,newid:i})},listen:function(e,t,n){if(e.addEventListener){return e.addEventListener(t,n,false)}if(e.attachEvent){return e.attachEvent("on"+t,n)}return false},stoplistening:function(e,t,n){if(e.removeEventListener){return e.removeEventListener(t,n,false)}if(e.detachEvent){return e.detachEvent("on"+t,n)}return false}};n.init=true;if(typeof module!="undefined"&&module.exports){module.exports=n}else if(typeof define==="function"&&define.amd){define("smoke",[],function(){return n})}else{this.smoke=n}})(window,document)
-
-// https://github.com/RadLikeWhoa/Countable
-!function(e){"use strict";function n(e){for(var n,t,r=[],o=0,i=e.length;i>o;)n=e.charCodeAt(o++),n>=55296&&56319>=n&&i>o?(t=e.charCodeAt(o++),56320==(64512&t)?r.push(((1023&n)<<10)+(1023&t)+65536):(r.push(n,t),o--)):r.push(n);return r}function t(e,n){var t=Object.prototype.toString.call(e),r=e&&(("[object NodeList]"===t||"[object HTMLCollection]"===t)&&e.length||1===e.nodeType),o=n&&"function"==typeof n;return"console"in window&&"warn"in console&&(r||console.warn("Countable: No valid elements were found"),o||console.warn('Countable: "'+n+'" is not a valid callback function')),r&&o}function r(e){var n={hardReturns:!1,stripTags:!1,ignoreReturns:!1,ignoreZeroWidth:!0};for(var t in e)n.hasOwnProperty(t)&&(n[t]=e[t]);return n}function o(e,t){var r,o=""+("value"in e?e.value:e.innerText||e.textContent);return t.stripTags&&(o=o.replace(/<\/?[a-z][^>]*>/gi,"")),t.ignoreZeroWidth&&(o=o.replace(/[\u200B]+/,"")),r=o.trim(),{paragraphs:r?(r.match(t.hardReturns?/\n{2,}/g:/\n+/g)||[]).length+1:0,sentences:r?(r.match(/[.?!…]+./g)||[]).length+1:0,words:r?(r.replace(/['";:,.?¿\-!¡]+/g,"").match(/\S+/g)||[]).length:0,characters:r?n(r.replace(/\s/g,"")).length:0,all:n(t.ignoreReturns?o.replace(/[\n\r]/g,""):o).length}}function i(e,n){var t=e.length;if("undefined"!=typeof t)for(;t--;)n(e[t]);else n(e)}var a=[],c="oninput"in document?"input":"keyup";navigator.userAgent.match(/MSIE 9.0/)&&(c="keyup"),String.prototype.trim||(String.prototype.trim=function(){return this.replace(/^\s+|\s+$/g,"")});var u={live:function(e,n,u){var l=r(u),s=function(e){var t=function(){n.call(e,o(e,l))};a.push({element:e,handler:t}),t(),e.addEventListener?e.addEventListener(c,t,!1):e.attachEvent&&e.attachEvent("on"+c,t)};if(t(e,n))return e.length?i(e,s):s(e),this},die:function(e){return t(e,function(){})?(i(e,function(e){var n;i(a,function(t){t.element===e&&(n=t)}),n&&(e.removeEventListener?e.removeEventListener(c,n.handler,!1):e.detachEvent&&e.detachEvent("on"+c,n.handler),a.splice(a.indexOf(n),1))}),this):void 0},once:function(e,n,a){return t(e,n)?(i(e,function(e){n.call(e,o(e,r(a)))}),this):void 0},count:function(e,n,t){return this.once(e,n,t)},enabled:function(e){var n=!1;return e&&1===e.nodeType&&i(a,function(t){t.element===e&&(n=!0)}),n}};"object"==typeof exports?module.exports=u:"function"==typeof define&&define.amd?define(function(){return u}):e.Countable=u}(this);
-
-document.addEventListener("DOMContentLoaded", function(event) {
-
-  document.querySelectorAll(
-  ".btn-group button, footer button, section button"
-).forEach(function(button) {
-
-  button.addEventListener("click", function(e) {
-
-    var rect = button.getBoundingClientRect();
-
-    button.style.setProperty(
-      "--ripple-x",
-      (e.clientX - rect.left) + "px"
-    );
-
-    button.style.setProperty(
-      "--ripple-y",
-      (e.clientY - rect.top) + "px"
-    );
-
-    button.classList.remove("ripple");
-
-    void button.offsetWidth;
-
-    button.classList.add("ripple");
-
-    setTimeout(function() {
+"use strict";
+document.addEventListener("DOMContentLoaded", function() {
+  document.querySelectorAll(".btn-group button, footer button, section button").forEach(function(button) {
+    button.addEventListener("click", function(e) {
+      var rect = button.getBoundingClientRect();
+      var x = (e.clientX || rect.left + rect.width / 2) - rect.left;
+      var y = (e.clientY || rect.top + rect.height / 2) - rect.top;
+      button.style.setProperty("--ripple-x", x + "px");
+      button.style.setProperty("--ripple-y", y + "px");
       button.classList.remove("ripple");
-    }, 450);
+      void button.offsetWidth;
+      button.classList.add("ripple");
+      setTimeout(function() { button.classList.remove("ripple"); }, 450);
+    });
   });
 
-});
+  const title = document.getElementById("fileName");
+  const content = document.getElementById("fileContent");
+  const start = document.getElementById("start");
+  const home = document.getElementById("homepage");
+  const save = document.getElementById("save");
+  const clear = document.getElementById("clear");
+  const settings = document.getElementById("settings");
+  const setMenu = document.getElementById("setMenu");
+  const notesBtn = document.getElementById("notes");
+  const notesMenu = document.getElementById("notesMenu");
+  const noteList = document.getElementById("noteList");
+  const newNote = document.getElementById("newNote");
+  const searchInput = document.getElementById("noteSearch");
+  const sortSelect = document.getElementById("noteSort");
+  const fs = document.getElementById("fs");
+  const lh = document.getElementById("lh");
+  const lw = document.getElementById("lw");
+  const theme = document.getElementById("theme");
+  const reset = document.getElementById("reset");
+  const info = document.getElementById("info");
+  const chars = document.getElementById("charCounter");
+  const words = document.getElementById("wordCounter");
+  const saveStatus = document.getElementById("saveStatus");
+  const exportBtn = document.getElementById("exportData");
+  const importBtn = document.getElementById("importData");
+  const fileInput = document.getElementById("fileInput");
+  const previewBtn = document.getElementById("previewToggle");
+  const preview = document.getElementById("preview");
+  const previewBody = document.getElementById("previewBody");
+  const shareBtn = document.getElementById("shareNote");
+  const copyBtn = document.getElementById("copyNote");
+  const dialog = document.getElementById("appDialog");
+  const dialogMessage = document.getElementById("dialogMessage");
+  const dialogInput = document.getElementById("dialogInput");
+  const dialogOk = document.getElementById("dialogOk");
+  const dialogCancel = document.getElementById("dialogCancel");
 
+  let dialogResolve = null;
 
-  var title   = document.getElementById("fileName"),
-      content = document.getElementById("fileContent"),
-      start   = document.getElementById("start"),
-      home    = document.getElementById("homepage"),
-      save    = document.getElementById("save"),
-      clear   = document.getElementById("clear"),
-      settings= document.getElementById("settings"),
-      setMenu = document.getElementById("setMenu"),
-      notesBtn  = document.getElementById("notes"),
-      notesMenu = document.getElementById("notesMenu"),
-      noteList  = document.getElementById("noteList"),
-      newNote   = document.getElementById("newNote"),
-      fs      = document.getElementById("fs"),
-      lh      = document.getElementById("lh"),
-      lw      = document.getElementById("lw"),
-      theme   = document.getElementById("theme"),
-      reset   = document.getElementById("reset"),
-      info    = document.getElementById("info"),
-      chars   = document.getElementById("charCounter"),
-      words   = document.getElementById("wordCounter"),
-      exportBtn     = document.getElementById("exportData"),
-      importBtn     = document.getElementById("importData");
+  function finishDialog(value) {
+    if (dialog.open) dialog.close();
+    const resolve = dialogResolve;
+    dialogResolve = null;
+    if (resolve) resolve(value);
+  }
 
-  function hasStorage() { 
-    var test = 'test';
+  function openDialog(mode, message, options) {
+    const opts = options || {};
+    return new Promise(function(resolve) {
+      dialogResolve = resolve;
+      dialogMessage.textContent = message;
+      dialogOk.textContent = opts.ok || "OK";
+      dialogCancel.textContent = opts.cancel || "Cancel";
+      dialog.setAttribute("data-mode", mode);
+      if (mode === "prompt") {
+        dialogInput.style.display = "";
+        dialogInput.value = opts.value || "";
+        dialogCancel.style.display = "";
+      } else if (mode === "confirm") {
+        dialogInput.style.display = "none";
+        dialogCancel.style.display = "";
+      } else {
+        dialogInput.style.display = "none";
+        dialogCancel.style.display = "none";
+      }
+      if (!dialog.open) dialog.showModal();
+      if (mode === "prompt") {
+        dialogInput.focus();
+        dialogInput.select();
+      } else {
+        dialogOk.focus();
+      }
+    });
+  }
+
+  function showAlert(message) {
+    return openDialog("alert", message, { ok: "OK" });
+  }
+
+  function showConfirm(message) {
+    return openDialog("confirm", message, { ok: "YES", cancel: "NO" });
+  }
+
+  function showPrompt(message, defaultValue, okLabel) {
+    return openDialog("prompt", message, { value: defaultValue || "", ok: okLabel || "Save", cancel: "Cancel" });
+  }
+
+  dialogOk.addEventListener("click", function(e) {
+    e.preventDefault();
+    const mode = dialog.getAttribute("data-mode");
+    if (mode === "prompt") finishDialog(dialogInput.value);
+    else if (mode === "confirm") finishDialog(true);
+    else finishDialog(undefined);
+  });
+
+  dialogCancel.addEventListener("click", function(e) {
+    e.preventDefault();
+    const mode = dialog.getAttribute("data-mode");
+    finishDialog(mode === "prompt" ? null : false);
+  });
+
+  dialog.addEventListener("cancel", function() {
+    const mode = dialog.getAttribute("data-mode");
+    const pending = dialogResolve;
+    dialogResolve = null;
+    if (!pending) return;
+    if (mode === "prompt") pending(null);
+    else if (mode === "confirm") pending(false);
+    else pending(undefined);
+  });
+
+  dialogInput.addEventListener("keydown", function(e) {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      dialogOk.click();
+    }
+  });
+
+  function downloadBlob(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(function() { URL.revokeObjectURL(url); }, 4000);
+  }
+
+  function escapeHtml(value) {
+    return String(value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  }
+
+  function countText(value) {
+    const text = String(value || "");
+    const trimmed = text.trim();
+    let wordCount = 0;
+    if (trimmed !== "") {
+      const matches = trimmed.replace(/['";:,.?¿\-!¡]+/g, "").match(/\S+/g);
+      wordCount = matches ? matches.length : 0;
+    }
+    return { words: wordCount, all: Array.from(text).length };
+  }
+
+  function updateCounters() {
+    const counter = countText(content.value);
+    words.textContent = counter.words + " words";
+    chars.textContent = counter.all + " chars";
+  }
+
+  function safeGet(key) {
+    try { return localStorage.getItem(key); } catch (err) { return null; }
+  }
+
+  function safeSet(key, value) {
+    try {
+      localStorage.setItem(key, value);
+      return true;
+    } catch (err) {
+      return false;
+    }
+  }
+
+  function safeRemove(key) {
+    try { localStorage.removeItem(key); } catch (err) {}
+  }
+
+  function isQuotaError(err) {
+    return !!err && (err.name === "QuotaExceededError" || err.code === 22 || err.code === 1014);
+  }
+
+  function formatTime(ts) {
+    try {
+      return new Date(ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    } catch (err) {
+      return "";
+    }
+  }
+
+  function setStatus(state, text) {
+    saveStatus.dataset.state = state;
+    saveStatus.textContent = text;
+  }
+
+  function markSaving() {
+    setStatus("saving", "Saving...");
+  }
+
+  function markSaved() {
+    setStatus("saved", "Saved \u2022 " + formatTime(Date.now()));
+  }
+
+  function markError(text) {
+    setStatus("error", text);
+  }
+
+  function hasStorage() {
+    const test = "test";
     try {
       localStorage.setItem(test, test);
       localStorage.removeItem(test);
       return true;
-    } catch(e) {
+    } catch (err) {
       return false;
     }
-  };
+  }
 
-  var notesPrefix = "SimpleJot-note:";
-  var recoveryPrefix = "SimpleJot-recovery:";
-  var note_exportversion = "1.0";
-  var defaultNoteBase = "New note";
-  var currentNote  = "";
-  var idbName = "SimpleJot";
-  var idbStore = "notes";
-  var SAVE_DELAY = 250;
-  var RECOVERY_THROTTLE = 1500;
-  var _dbPromise = null;
-  var namesCache = [];
-  var saveTimer = null;
-  var lastRecoveryWrite = 0;
+  const notesPrefix = "SimpleJot-note:";
+  const recoveryPrefix = "SimpleJot-recovery:";
+  const noteExportVersion = "1.0";
+  const defaultNoteBase = "New note";
+  const PIN_KEY = "SimpleJot-pins";
+  const META_KEY = "SimpleJot-meta";
+  let currentNote = "";
+  const idbName = "SimpleJot";
+  const idbStore = "notes";
+  const SAVE_DELAY = 250;
+  const RECOVERY_THROTTLE = 1500;
+  let _dbPromise = null;
+  let namesCache = [];
+  let saveTimer = null;
+  let lastRecoveryWrite = 0;
+  let listToken = 0;
+  let previewOpen = false;
+  let pins = [];
+  let meta = {};
+
+  try {
+    pins = JSON.parse(safeGet(PIN_KEY) || "[]");
+    if (!Array.isArray(pins)) pins = [];
+  } catch (err) {
+    pins = [];
+  }
+
+  try {
+    meta = JSON.parse(safeGet(META_KEY) || "{}");
+    if (!meta || typeof meta !== "object") meta = {};
+  } catch (err) {
+    meta = {};
+  }
+
+  function savePins() {
+    if (!safeSet(PIN_KEY, JSON.stringify(pins))) markError("Save failed: storage is full");
+  }
+
+  function saveMeta() {
+    safeSet(META_KEY, JSON.stringify(meta));
+  }
+
+  function touchMeta(name) {
+    meta[name] = Date.now();
+    saveMeta();
+  }
 
   function idbOpen() {
-    if(_dbPromise) return _dbPromise;
+    if (_dbPromise) return _dbPromise;
     _dbPromise = new Promise(function(res, rej) {
       try {
-        var req = indexedDB.open(idbName, 1);
+        const req = indexedDB.open(idbName, 1);
         req.onupgradeneeded = function() {
-          if(!req.result.objectStoreNames.contains(idbStore)) {
+          if (!req.result.objectStoreNames.contains(idbStore)) {
             req.result.createObjectStore(idbStore);
           }
         };
         req.onsuccess = function() { res(req.result); };
         req.onerror = function() { rej(req.error); };
         req.onblocked = function() {};
-      } catch(e) { rej(e); }
+      } catch (err) { rej(err); }
     });
     return _dbPromise;
   }
+
   function idbTx(mode, fn) {
     return idbOpen().then(function(db) {
       return new Promise(function(res, rej) {
-        var tx;
+        let tx;
         try { tx = db.transaction(idbStore, mode); }
-        catch(e) { rej(e); return; }
-        var out;
+        catch (err) { rej(err); return; }
+        let out;
         try { out = fn(tx.objectStore(idbStore)); }
-        catch(e) { rej(e); return; }
+        catch (err) { rej(err); return; }
         tx.oncomplete = function() { res(out && out.result !== undefined ? out.result : out); };
         tx.onerror = function() { rej(tx.error); };
         tx.onabort = function() { rej(tx.error || new Error("IDB aborted")); };
       });
     });
   }
+
   function idbGet(name) {
     return idbTx("readonly", function(s) { return s.get(name); }).then(function(v) {
-      if(v === undefined || v === null) return null;
-      if(typeof v === "object" && v !== null && "c" in v) return v.c;
+      if (v === undefined || v === null) return null;
+      if (typeof v === "object" && v !== null && "c" in v) return v.c;
       return String(v);
     });
   }
+
   function idbPut(name, value) {
-    var rec = { c: value || "", u: Date.now() };
+    const rec = { c: value || "", u: Date.now() };
     return idbTx("readwrite", function(s) { return s.put(rec, name); }).then(function() {
-      if(namesCache.indexOf(name) === -1) namesCache.push(name);
+      if (namesCache.indexOf(name) === -1) namesCache.push(name);
+      touchMeta(name);
     });
   }
+
   function idbDel(name) {
     return idbTx("readwrite", function(s) { return s.delete(name); }).then(function() {
-      var i = namesCache.indexOf(name);
-      if(i !== -1) namesCache.splice(i, 1);
+      const i = namesCache.indexOf(name);
+      if (i !== -1) namesCache.splice(i, 1);
+      const pi = pins.indexOf(name);
+      if (pi !== -1) {
+        pins.splice(pi, 1);
+        savePins();
+      }
+      if (meta[name] !== undefined) {
+        delete meta[name];
+        saveMeta();
+      }
     });
   }
+
   function idbGetAllKeys() {
     return idbOpen().then(function(db) {
       return new Promise(function(res, rej) {
         try {
-          var tx = db.transaction(idbStore, "readonly");
-          var store = tx.objectStore(idbStore);
-          if(store.getAllKeys) {
-            var rq = store.getAllKeys();
+          const tx = db.transaction(idbStore, "readonly");
+          const store = tx.objectStore(idbStore);
+          if (store.getAllKeys) {
+            const rq = store.getAllKeys();
             rq.onsuccess = function() { res(rq.result || []); };
             rq.onerror = function() { rej(rq.error); };
           } else {
-            var keys = [];
-            var cur = store.openCursor();
+            const keys = [];
+            const cur = store.openCursor();
             cur.onsuccess = function() {
-              var c = cur.result;
-              if(c) { keys.push(c.key); c.continue(); }
+              const c = cur.result;
+              if (c) { keys.push(c.key); c.continue(); }
               else res(keys);
             };
             cur.onerror = function() { rej(cur.error); };
           }
-        } catch(e) { rej(e); }
+        } catch (err) { rej(err); }
       });
     });
   }
+
   function refreshNames() {
     return idbGetAllKeys().then(function(keys) {
       namesCache = (keys || []).slice().sort();
@@ -192,249 +371,717 @@ document.addEventListener("DOMContentLoaded", function(event) {
   }
 
   function writeRecoverySync() {
-    if(!currentNote) return;
-    try {
-      localStorage.setItem(recoveryPrefix + currentNote, content.value);
-      lastRecoveryWrite = Date.now();
-    } catch(e) {}
+    if (!currentNote) return true;
+    return safeSet(recoveryPrefix + currentNote, content.value);
   }
+
   function scheduleRecovery() {
-    if(Date.now() - lastRecoveryWrite > RECOVERY_THROTTLE) writeRecoverySync();
+    if (Date.now() - lastRecoveryWrite > RECOVERY_THROTTLE) {
+      if (writeRecoverySync()) lastRecoveryWrite = Date.now();
+    }
   }
+
   function clearRecovery(name) {
-    try { localStorage.removeItem(recoveryPrefix + (name || currentNote)); } catch(e) {}
+    safeRemove(recoveryPrefix + (name || currentNote));
   }
+
   function flushSave() {
-    if(saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
-    if(!currentNote) return Promise.resolve();
-    var val = content.value;
+    if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
+    if (!currentNote) return Promise.resolve();
+    const val = content.value;
     return idbPut(currentNote, val).then(function() {
       clearRecovery(currentNote);
-    }).catch(function() {
+      markSaved();
+    }).catch(function(err) {
       writeRecoverySync();
+      if (isQuotaError(err)) {
+        markError("Save failed: storage is full");
+        showAlert("Storage is full, so this note could not be saved. Free some space or export your notes.");
+      } else {
+        markError("Save failed");
+      }
     });
   }
+
   function requestSave() {
-    if(saveTimer) clearTimeout(saveTimer);
+    markSaving();
+    if (saveTimer) clearTimeout(saveTimer);
     saveTimer = setTimeout(flushSave, SAVE_DELAY);
     scheduleRecovery();
   }
-  function saveCurrentNote() {
-    requestSave();
-  }
 
   function generateNoteName(baseName) {
-    var names = getNoteNames();
-    var candidate = baseName;
-    var counter = 0;
-    while(names.indexOf(candidate) !== -1) {
+    const names = getNoteNames();
+    let candidate = baseName;
+    let counter = 0;
+    while (names.indexOf(candidate) !== -1) {
       counter++;
       candidate = baseName + " (" + counter + ")";
     }
     return candidate;
   }
+
   function ensureCurrentNote() {
-    if(currentNote) return Promise.resolve(currentNote);
-    var autoName = generateNoteName(defaultNoteBase);
+    if (currentNote) return Promise.resolve(currentNote);
+    const autoName = generateNoteName(defaultNoteBase);
     currentNote = autoName;
-    try { localStorage.setItem("SimpleJot-current", autoName); } catch(e) {}
+    safeSet("SimpleJot-current", autoName);
     title.value = autoName;
     return idbPut(autoName, content.value).then(function() {
+      markSaved();
       renderNoteList();
+      return autoName;
+    }).catch(function(err) {
+      if (isQuotaError(err)) markError("Save failed: storage is full");
       return autoName;
     });
   }
 
-  function updateCounters() {
-    Countable.once(content, function(counter) {
-      words.innerHTML = counter.words + ":words";
-      chars.innerHTML = counter.all + ":chars";
-    });
-  }
+  let openSeq = 0;
 
-  var openSeq = 0;
   function openNote(name) {
-    var mySeq = ++openSeq;
-    var prevName = currentNote;
-    var prevVal = content.value;
-    if(prevName && prevName !== name) {
-      if(saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
+    const mySeq = ++openSeq;
+    const prevName = currentNote;
+    const prevVal = content.value;
+    if (prevName && prevName !== name) {
+      if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
       idbPut(prevName, prevVal).then(function() {
         clearRecovery(prevName);
       }).catch(function() {
-        try { localStorage.setItem(recoveryPrefix + prevName, prevVal); } catch(e) {}
+        safeSet(recoveryPrefix + prevName, prevVal);
       });
-    } else if(saveTimer) {
+    } else if (saveTimer) {
       clearTimeout(saveTimer); saveTimer = null;
     }
     currentNote = name;
-    try { localStorage.setItem("SimpleJot-current", name); } catch(e) {}
+    safeSet("SimpleJot-current", name);
     title.value = name;
-    var rec = null;
-    try { rec = localStorage.getItem(recoveryPrefix + name); } catch(e) {}
-    if(rec !== null && rec !== undefined) {
+    if (previewOpen) togglePreview(false);
+    let rec = null;
+    try { rec = localStorage.getItem(recoveryPrefix + name); } catch (err) {}
+    if (rec !== null && rec !== undefined) {
       content.value = rec;
       updateCounters();
       idbPut(name, rec).then(function() { clearRecovery(name); }).catch(function() {});
+      markSaved();
+      renderNoteList();
       return Promise.resolve(name);
     }
     return idbGet(name).then(function(v) {
-      if(mySeq !== openSeq || currentNote !== name) return;
+      if (mySeq !== openSeq || currentNote !== name) return;
       content.value = (v === null || v === undefined) ? "" : v;
       updateCounters();
+      renderNoteList();
+    }).catch(function() {
+      if (mySeq !== openSeq || currentNote !== name) return;
+      content.value = "";
+      updateCounters();
     });
+  }
+
+  function formatDate(ts) {
+    if (!ts) return "";
+    try {
+      return new Date(ts).toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" });
+    } catch (err) {
+      return "";
+    }
+  }
+
+  function sortedNames(names) {
+    const mode = sortSelect ? sortSelect.value : "updated";
+    const pinned = [];
+    const rest = [];
+    names.forEach(function(n) {
+      if (pins.indexOf(n) !== -1) pinned.push(n);
+      else rest.push(n);
+    });
+    const byName = function(a, b) { return a.localeCompare(b); };
+    const byUpdated = function(a, b) { return (meta[b] || 0) - (meta[a] || 0) || byName(a, b); };
+    const cmp = mode === "name" ? byName : byUpdated;
+    pinned.sort(cmp);
+    rest.sort(cmp);
+    return pinned.concat(rest);
   }
 
   function renderNoteList() {
     noteList.innerHTML = "";
-    var names = getNoteNames();
-    for(var i = 0; i < names.length; i++) {
-      var name = names[i];
-      var li = document.createElement("li");
-      if(name === currentNote) {
-        li.className = "note--current";
-      }
-      var openBtn = document.createElement("button");
-      openBtn.className = "note-open";
-      openBtn.setAttribute("data-note", name);
-      openBtn.appendChild(document.createTextNode(name));
-      openBtn.addEventListener("click", function() {
+    const q = searchInput ? searchInput.value.trim().toLowerCase() : "";
+    const names = sortedNames(getNoteNames()).filter(function(n) {
+      return q === "" || n.toLowerCase().indexOf(q) !== -1;
+    });
+    const myToken = ++listToken;
+    if (!names.length) {
+      const empty = document.createElement("li");
+      empty.className = "notes-empty";
+      empty.textContent = q ? "No notes match your search." : "No notes yet.";
+      noteList.appendChild(empty);
+      return;
+    }
+    names.forEach(function(name) {
+      const li = document.createElement("li");
+      if (name === currentNote) li.className = "note--current";
+      const main = document.createElement("button");
+      main.className = "note-open";
+      main.setAttribute("data-note", name);
+      main.setAttribute("aria-label", "Open note " + name);
+      const nameSpan = document.createElement("span");
+      nameSpan.className = "note-name";
+      nameSpan.textContent = name;
+      const metaLine = document.createElement("span");
+      metaLine.className = "note-meta";
+      const snippetSpan = document.createElement("span");
+      snippetSpan.className = "note-snippet";
+      snippetSpan.textContent = "Loading...";
+      const dateSpan = document.createElement("span");
+      dateSpan.className = "note-date";
+      dateSpan.textContent = formatDate(meta[name]);
+      metaLine.appendChild(snippetSpan);
+      metaLine.appendChild(dateSpan);
+      main.appendChild(nameSpan);
+      main.appendChild(metaLine);
+      main.addEventListener("click", function() {
         openNote(this.getAttribute("data-note"));
         notesMenu.classList.remove("notes-menu--open");
         notesBtn.classList.remove("notes-btn--active");
+        notesBtn.focus();
       });
-      var delBtn = document.createElement("button");
+      const pinBtn = document.createElement("button");
+      pinBtn.className = "note-pin" + (pins.indexOf(name) !== -1 ? " is-pinned" : "");
+      pinBtn.title = pins.indexOf(name) !== -1 ? "Unpin note" : "Pin note";
+      pinBtn.setAttribute("aria-label", (pins.indexOf(name) !== -1 ? "Unpin note " : "Pin note ") + name);
+      pinBtn.setAttribute("data-note", name);
+      pinBtn.textContent = pins.indexOf(name) !== -1 ? "\u2605" : "\u2606";
+      pinBtn.addEventListener("click", function() {
+        const n = this.getAttribute("data-note");
+        const i = pins.indexOf(n);
+        if (i === -1) pins.push(n);
+        else pins.splice(i, 1);
+        savePins();
+        renderNoteList();
+      });
+      const delBtn = document.createElement("button");
       delBtn.className = "note-delete";
       delBtn.title = "Delete note";
+      delBtn.setAttribute("aria-label", "Delete note " + name);
       delBtn.setAttribute("data-note", name);
-      delBtn.appendChild(document.createTextNode("×"));
+      delBtn.textContent = "\u00d7";
       delBtn.addEventListener("click", function() {
         trashNote(this.getAttribute("data-note"));
       });
-      li.appendChild(openBtn);
+      li.appendChild(main);
+      li.appendChild(pinBtn);
       li.appendChild(delBtn);
       noteList.appendChild(li);
-    }
+      idbGet(name).then(function(v) {
+        if (myToken !== listToken) return;
+        const text = String(v === null || v === undefined ? "" : v);
+        const firstLine = text.split("\n")[0].trim().slice(0, 60);
+        snippetSpan.textContent = firstLine === "" ? "Empty note" : firstLine;
+      }).catch(function() {
+        if (myToken !== listToken) return;
+        snippetSpan.textContent = "Empty note";
+      });
+    });
   }
 
   function trashNote(name) {
-    smoke.confirm("This will trash note \"" + name + "\" and clear it from SimpleJot's local data, are you sure?",function(e) {
-      if(e) {
-        if(saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
-        idbDel(name).then(function() {
-          clearRecovery(name);
-          if(name === currentNote) {
-            currentNote = "";
-            try { localStorage.removeItem('SimpleJot-current'); } catch(err) {}
-            title.value = "";
-            content.value = "";
-            words.innerHTML = "0:words";
-            chars.innerHTML = "0:chars";
-          }
-          renderNoteList();
-        });
-      }}, {
-      reverseButtons: true,
-      ok: "YES",
-      cancel: "NO"
+    showConfirm("Delete note \u201c" + name + "\u201d? It will be removed from this browser.", { ok: "YES", cancel: "NO" }).then(function(yes) {
+      if (!yes) return;
+      if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
+      idbDel(name).then(function() {
+        clearRecovery(name);
+        if (name === currentNote) {
+          currentNote = "";
+          safeRemove("SimpleJot-current");
+          title.value = "";
+          content.value = "";
+          updateCounters();
+          setStatus("ready", "Ready");
+        }
+        renderNoteList();
+      }).catch(function() {
+        renderNoteList();
+      });
     });
-  };
+  }
 
   function migrateFromLocalStorage() {
-    var batch = [];
+    const batch = [];
     try {
-      if(localStorage.getItem("SimpleJot-title") !== null || localStorage.getItem("SimpleJot-content") !== null) {
-        var legacyTitle = localStorage.getItem("SimpleJot-title") || "Untitled";
-        var legacyContent = localStorage.getItem("SimpleJot-content") || "";
+      if (localStorage.getItem("SimpleJot-title") !== null || localStorage.getItem("SimpleJot-content") !== null) {
+        const legacyTitle = localStorage.getItem("SimpleJot-title") || "Untitled";
+        const legacyContent = localStorage.getItem("SimpleJot-content") || "";
         batch.push({ k: legacyTitle, v: legacyContent });
         localStorage.removeItem("SimpleJot-title");
         localStorage.removeItem("SimpleJot-content");
-        try { localStorage.setItem("SimpleJot-current", legacyTitle); } catch(e) {}
+        safeSet("SimpleJot-current", legacyTitle);
       }
-      var toRemove = [];
-      for(var i = 0; i < localStorage.length; i++) {
-        var key = localStorage.key(i);
-        if(key && key.indexOf(notesPrefix) === 0) {
+      const toRemove = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.indexOf(notesPrefix) === 0) {
           batch.push({ k: key.slice(notesPrefix.length), v: localStorage.getItem(key) || "" });
           toRemove.push(key);
         }
       }
-      var chain = Promise.resolve();
+      let chain = Promise.resolve();
       batch.forEach(function(item) {
         chain = chain.then(function() { return idbPut(item.k, item.v); });
       });
       return chain.then(function() {
-        toRemove.forEach(function(k) { try { localStorage.removeItem(k); } catch(e) {} });
-        try { localStorage.setItem("SimpleJot-migrated-idb-v1", "1"); } catch(e) {}
+        toRemove.forEach(function(k) { safeRemove(k); });
+        safeSet("SimpleJot-migrated-idb-v1", "1");
       });
-    } catch(e) { return Promise.resolve(); }
+    } catch (err) { return Promise.resolve(); }
   }
 
-  if(hasStorage() === true){
-    try {
-      if(navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(function() {});
-    } catch(e) {}
+  function inlineMd(s) {
+    let out = s.replace(/`([^`]+)`/g, "<code>$1</code>");
+    out = out.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+    out = out.replace(/(^|\W)\*([^*\n]+)\*/g, "$1<em>$2</em>");
+    out = out.replace(/(^|\W)_([^_\n]+)_/g, "$1<em>$2</em>");
+    out = out.replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, "<a href=\"$2\" target=\"_blank\" rel=\"noopener\">$1</a>");
+    return out;
+  }
 
-    content.addEventListener("input", function() {
-      if(!currentNote) {
-        if(content.value === "") {
+  function renderMarkdown(src) {
+    const lines = escapeHtml(src).split("\n");
+    let html = "";
+    let inList = false;
+    let inCode = false;
+    const closeList = function() {
+      if (inList) {
+        html += "</ul>";
+        inList = false;
+      }
+    };
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      if (/^```/.test(line)) {
+        closeList();
+        html += inCode ? "</code></pre>" : "<pre><code>";
+        inCode = !inCode;
+        continue;
+      }
+      if (inCode) {
+        html += line + "\n";
+        continue;
+      }
+      const heading = /^(#{1,6})\s+(.*)/.exec(line);
+      if (heading) {
+        closeList();
+        const level = heading[1].length;
+        html += "<h" + level + ">" + inlineMd(heading[2]) + "</h" + level + ">";
+        continue;
+      }
+      const task = /^\s*-\s+\[([ xX])\]\s+(.*)/.exec(line);
+      if (task) {
+        if (!inList) { html += "<ul>"; inList = true; }
+        const checked = task[1].toLowerCase() === "x" ? " checked disabled" : " disabled";
+        html += "<li class=\"task\"><input type=\"checkbox\"" + checked + "><span>" + inlineMd(task[2]) + "</span></li>";
+        continue;
+      }
+      const bullet = /^\s*-\s+(.*)/.exec(line);
+      if (bullet) {
+        if (!inList) { html += "<ul>"; inList = true; }
+        html += "<li>" + inlineMd(bullet[1]) + "</li>";
+        continue;
+      }
+      const quote = /^\s*&gt;\s?(.*)/.exec(line);
+      if (quote) {
+        closeList();
+        html += "<blockquote>" + inlineMd(quote[1]) + "</blockquote>";
+        continue;
+      }
+      if (line.trim() === "") {
+        closeList();
+        continue;
+      }
+      closeList();
+      html += "<p>" + inlineMd(line) + "</p>";
+    }
+    closeList();
+    if (inCode) html += "</code></pre>";
+    return html;
+  }
+
+  function refreshPreview() {
+    if (!previewOpen) return;
+    if (content.value.trim() === "") {
+      previewBody.innerHTML = "";
+      previewBody.textContent = "Nothing to preview yet.";
+    } else {
+      previewBody.innerHTML = renderMarkdown(content.value);
+    }
+  }
+
+  function togglePreview(force) {
+    previewOpen = typeof force === "boolean" ? force : !previewOpen;
+    preview.hidden = !previewOpen;
+    content.style.display = previewOpen ? "none" : "";
+    previewBtn.classList.toggle("preview-btn--active", previewOpen);
+    previewBtn.setAttribute("aria-pressed", previewOpen ? "true" : "false");
+    if (previewOpen) refreshPreview();
+    else content.focus();
+  }
+
+  function buildShareLink() {
+    try {
+      const url = new URL(window.location.href);
+      url.search = "?share=" + encodeURIComponent(currentNote);
+      return url.toString();
+    } catch (err) {
+      return window.location.href;
+    }
+  }
+
+  function readFileAsText(file) {
+    return new Promise(function(resolve, reject) {
+      const reader = new FileReader();
+      reader.onload = function(ev) { resolve(ev.target.result); };
+      reader.onerror = function() { reject(reader.error || new Error("read failed")); };
+      reader.readAsText(file);
+    });
+  }
+
+  function processImportedNotes(dataStr) {
+    let data;
+    try {
+      data = JSON.parse(dataStr);
+    } catch (err) {
+      showAlert("That file is not valid JSON, so nothing was imported.");
+      return;
+    }
+    if (!data || typeof data !== "object" || !data.notes || typeof data.notes !== "object") {
+      showAlert("Invalid backup format. Expected an object with a \"notes\" property.");
+      return;
+    }
+    const noteObj = data.notes;
+    let importedCount = 0;
+    const keys = Object.keys(noteObj);
+    let chain = Promise.resolve();
+    keys.forEach(function(key) {
+      chain = chain.then(function() {
+        const value = String(noteObj[key] === null || noteObj[key] === undefined ? "" : noteObj[key]);
+        let noteName;
+        if (key && key.trim() !== "") {
+          noteName = getNoteNames().indexOf(key) !== -1 ? generateNoteName(key) : key;
+        } else {
+          noteName = generateNoteName(defaultNoteBase);
+        }
+        return idbPut(noteName, value).then(function() { importedCount++; });
+      });
+    });
+    chain.then(function() {
+      markSaved();
+      if (currentNote === "" || getNoteNames().indexOf(currentNote) === -1) {
+        const firstNote = sortedNames(getNoteNames())[0];
+        if (firstNote) {
+          openNote(firstNote);
           return;
         }
-        ensureCurrentNote();
+      }
+      renderNoteList();
+      showAlert("Successfully imported " + importedCount + " note(s).");
+    }).catch(function(err) {
+      if (isQuotaError(err)) {
+        markError("Save failed: storage is full");
+        showAlert("Storage is full, so only " + importedCount + " note(s) were imported.");
+      } else {
+        showAlert("Imported " + importedCount + " note(s).");
+      }
+      renderNoteList();
+    });
+  }
+
+  function handleImportFile(file) {
+    if (!file) return;
+    readFileAsText(file).then(function(text) {
+      processImportedNotes(text);
+    }).catch(function() {
+      showAlert("Failed to read file. Please try again.");
+    });
+  }
+
+  function handleDroppedFile(file) {
+    if (!file) return;
+    const name = file.name || "";
+    const isJson = /\.json$/i.test(name) || (file.type && file.type.indexOf("json") !== -1);
+    if (isJson) {
+      handleImportFile(file);
+      return;
+    }
+    readFileAsText(file).then(function(text) {
+      const base = name.replace(/\.[a-z0-9]+$/i, "") || defaultNoteBase;
+      const noteName = getNoteNames().indexOf(base) !== -1 ? generateNoteName(base) : base;
+      const prevName = currentNote;
+      const prevVal = content.value;
+      if (prevName) {
+        if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
+        idbPut(prevName, prevVal).catch(function() {});
+      }
+      currentNote = noteName;
+      safeSet("SimpleJot-current", noteName);
+      title.value = noteName;
+      content.value = String(text || "");
+      updateCounters();
+      idbPut(noteName, content.value).then(function() {
+        markSaved();
+        renderNoteList();
+      }).catch(function(err) {
+        if (isQuotaError(err)) markError("Save failed: storage is full");
+      });
+    }).catch(function() {
+      showAlert("Failed to read file. Please try again.");
+    });
+  }
+
+  function exportData() {
+    flushSave().then(function() {
+      const notes = {};
+      const names = getNoteNames();
+      let chain = Promise.resolve();
+      names.forEach(function(n) {
+        chain = chain.then(function() {
+          return idbGet(n).then(function(v) { notes[n] = (v === null ? "" : v); });
+        });
+      });
+      return chain.then(function() { return notes; });
+    }).then(function(notes) {
+      const exportObj = {
+        version: noteExportVersion,
+        exportedAt: new Date().toISOString(),
+        notes: notes
+      };
+      const exportStr = JSON.stringify(exportObj, null, 2);
+      downloadBlob(new Blob([exportStr], { type: "application/json;charset=utf-8" }), "simplejot-export-" + Date.now() + ".json");
+    }).catch(function(err) {
+      if (isQuotaError(err)) showAlert("Storage is full, so the export could not be prepared.");
+    });
+  }
+
+  function createNewNote() {
+    const prevName = currentNote;
+    const prevVal = content.value;
+    if (prevName) {
+      if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
+      idbPut(prevName, prevVal).then(function() { clearRecovery(prevName); }).catch(function() {
+        safeSet(recoveryPrefix + prevName, prevVal);
+      });
+    }
+    const autoName = generateNoteName(defaultNoteBase);
+    currentNote = autoName;
+    safeSet("SimpleJot-current", autoName);
+    title.value = autoName;
+    content.value = "";
+    if (previewOpen) togglePreview(false);
+    updateCounters();
+    setStatus("ready", "Ready");
+    idbPut(autoName, "").then(function() {
+      markSaved();
+      renderNoteList();
+    }).catch(function(err) {
+      if (isQuotaError(err)) markError("Save failed: storage is full");
+      renderNoteList();
+    });
+    notesMenu.classList.remove("notes-menu--open");
+    notesBtn.classList.remove("notes-btn--active");
+    content.focus();
+  }
+
+  function commitRename() {
+    const newName = title.value.trim();
+    if (!newName) {
+      title.value = currentNote;
+      return;
+    }
+    if (newName === currentNote) {
+      title.value = currentNote;
+      return;
+    }
+    if (getNoteNames().indexOf(newName) !== -1) {
+      showAlert("A note named \u201c" + newName + "\u201d already exists. Please choose another name.");
+      title.value = currentNote;
+      title.focus();
+      return;
+    }
+    const oldName = currentNote;
+    const val = content.value;
+    if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
+    currentNote = newName;
+    safeSet("SimpleJot-current", newName);
+    title.value = newName;
+    markSaving();
+    const p = oldName ? idbGet(oldName).then(function(oldVal) {
+      const c = (val !== "" ? val : (oldVal || ""));
+      return idbPut(newName, c).then(function() { return idbDel(oldName); });
+    }) : idbPut(newName, val);
+    p.then(function() {
+      if (oldName) clearRecovery(oldName);
+      markSaved();
+      renderNoteList();
+    }).catch(function(err) {
+      if (isQuotaError(err)) {
+        markError("Save failed: storage is full");
+        showAlert("Storage is full, so the note could not be renamed.");
+        currentNote = oldName;
+        title.value = oldName || "";
+        safeSet("SimpleJot-current", oldName || "");
+      }
+    });
+  }
+
+  function textSettings() {
+    const fsValue = fs.value;
+    const lhValue = lh.value;
+    const lwValue = lw.value;
+    const settingValues = "font-size:" + fsValue + "em;line-height:" + lhValue + ";padding-left:" + lwValue + "em;padding-right:" + lwValue + "em;";
+    content.style.cssText = settingValues;
+    if (previewOpen) preview.style.cssText = settingValues;
+    safeSet("SimpleJot-settings", settingValues);
+    safeSet("SimpleJot-settings-fs", fsValue);
+    safeSet("SimpleJot-settings-lh", lhValue);
+    safeSet("SimpleJot-settings-lw", lwValue);
+  }
+
+  function applyStoredSettings() {
+    const stored = safeGet("SimpleJot-settings");
+    if (stored) {
+      content.style.cssText = stored;
+      preview.style.cssText = stored;
+    }
+    const fsv = safeGet("SimpleJot-settings-fs");
+    if (fsv) fs.value = fsv;
+    const lhv = safeGet("SimpleJot-settings-lh");
+    if (lhv) lh.value = lhv;
+    const lwv = safeGet("SimpleJot-settings-lw");
+    if (lwv) lw.value = lwv;
+  }
+
+  const rootEl = document.documentElement;
+
+  function applyTheme() {
+    const stored = safeGet("SimpleJot-theme");
+    if (stored === "night") {
+      rootEl.classList.add("night");
+    } else if (stored === "light") {
+      rootEl.classList.remove("night");
+    } else if (window.matchMedia) {
+      rootEl.classList.toggle("night", window.matchMedia("(prefers-color-scheme: dark)").matches);
+    }
+  }
+
+  if (hasStorage() === true) {
+    try {
+      if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(function() {});
+    } catch (err) {}
+
+    applyTheme();
+    if (window.matchMedia) {
+      try {
+        window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", function() {
+          if (!safeGet("SimpleJot-theme")) applyTheme();
+        });
+      } catch (err) {}
+    }
+    applyStoredSettings();
+
+    content.addEventListener("input", function() {
+      updateCounters();
+      if (previewOpen) refreshPreview();
+      if (!currentNote) {
+        if (content.value === "") return;
+        ensureCurrentNote().then(function() { requestSave(); });
       } else {
         requestSave();
       }
     });
 
-    function handleHide() { writeRecoverySync(); flushSave(); }
+    content.addEventListener("keydown", function(e) {
+      if (e.key === "Tab") {
+        e.preventDefault();
+        const startPos = content.selectionStart || 0;
+        const endPos = content.selectionEnd || 0;
+        content.value = content.value.slice(0, startPos) + "  " + content.value.slice(endPos);
+        content.selectionStart = content.selectionEnd = startPos + 2;
+        updateCounters();
+        if (previewOpen) refreshPreview();
+        if (!currentNote) {
+          ensureCurrentNote().then(function() { requestSave(); });
+        } else {
+          requestSave();
+        }
+      }
+    });
+
+    document.addEventListener("keydown", function(e) {
+      const mod = e.ctrlKey || e.metaKey;
+      if (!mod) return;
+      const key = (e.key || "").toLowerCase();
+      if (key === "s") {
+        e.preventDefault();
+        save.click();
+      } else if (key === "n") {
+        e.preventDefault();
+        createNewNote();
+      } else if (key === "k") {
+        e.preventDefault();
+        notesMenu.classList.add("notes-menu--open");
+        notesBtn.classList.add("notes-btn--active");
+        setMenu.classList.remove("settings-menu--open");
+        settings.classList.remove("settings-btn--active");
+        refreshNames().then(renderNoteList).catch(renderNoteList);
+        if (searchInput) searchInput.focus();
+      }
+    });
+
+    function handleHide() {
+      writeRecoverySync();
+      flushSave();
+    }
+
     document.addEventListener("visibilitychange", function() {
-      if(document.hidden) handleHide();
+      if (document.hidden) handleHide();
     });
     window.addEventListener("pagehide", handleHide);
     window.addEventListener("beforeunload", function() { writeRecoverySync(); });
 
-    title.addEventListener("input", function() {
-      var newName = this.value;
-      if(!newName || newName === currentNote) return;
-      if(getNoteNames().indexOf(newName) !== -1) return;
-      var oldName = currentNote;
-      var val = content.value;
-      if(saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
-      currentNote = newName;
-      try { localStorage.setItem("SimpleJot-current", newName); } catch(e) {}
-      var p = oldName ? idbGet(oldName).then(function(oldVal) {
-        var c = (val !== "" ? val : (oldVal || ""));
-        return idbPut(newName, c).then(function() { return idbDel(oldName); });
-      }) : idbPut(newName, val);
-      p.then(function() {
-        if(oldName) clearRecovery(oldName);
-        renderNoteList();
-      });
-    });
-    title.addEventListener("change", function() {
-      if(this.value.trim() === "") {
-        if(currentNote) {
-          this.value = currentNote;
-        }
+    title.addEventListener("keydown", function(e) {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        title.blur();
       }
     });
+    title.addEventListener("change", commitRename);
+    title.addEventListener("blur", function() {
+      if (title.value.trim() === "" && currentNote) title.value = currentNote;
+    });
+
+    if (searchInput) {
+      searchInput.addEventListener("input", renderNoteList);
+    }
+    if (sortSelect) {
+      const storedSort = safeGet("SimpleJot-sort");
+      if (storedSort === "name" || storedSort === "updated") sortSelect.value = storedSort;
+      sortSelect.addEventListener("change", function() {
+        safeSet("SimpleJot-sort", sortSelect.value);
+        renderNoteList();
+      });
+    }
+
     function bootFromIDB() {
-      var migrated = null;
-      try { migrated = localStorage.getItem("SimpleJot-migrated-idb-v1"); } catch(e) {}
-      var start = migrated ? Promise.resolve() : migrateFromLocalStorage();
-      return start.then(refreshNames).then(function() {
-        var unnamed = getNoteNames().filter(function(n) { return n.trim() === ""; });
-        var chain = Promise.resolve();
+      const migrated = safeGet("SimpleJot-migrated-idb-v1");
+      const startP = migrated ? Promise.resolve() : migrateFromLocalStorage();
+      return startP.then(refreshNames).then(function() {
+        const unnamed = getNoteNames().filter(function(n) { return n.trim() === ""; });
+        let chain = Promise.resolve();
         unnamed.forEach(function(bad) {
           chain = chain.then(function() {
-            var fixedName = generateNoteName(defaultNoteBase);
+            const fixedName = generateNoteName(defaultNoteBase);
             return idbGet(bad).then(function(v) {
               return idbPut(fixedName, v || "").then(function() { return idbDel(bad); }).then(function() {
-                try {
-                  if(localStorage.getItem("SimpleJot-current") === bad) {
-                    localStorage.setItem("SimpleJot-current", fixedName);
-                  }
-                } catch(e) {}
+                if (safeGet("SimpleJot-current") === bad) safeSet("SimpleJot-current", fixedName);
                 clearRecovery(bad);
               });
             });
@@ -442,136 +1089,148 @@ document.addEventListener("DOMContentLoaded", function(event) {
         });
         return chain;
       }).then(refreshNames).then(function() {
-        if(!getNoteNames().length) {
-          var firstNote = generateNoteName(defaultNoteBase);
+        if (!getNoteNames().length) {
+          const firstNote = generateNoteName(defaultNoteBase);
           return idbPut(firstNote, "").then(function() {
-            try { localStorage.setItem("SimpleJot-current", firstNote); } catch(e) {}
+            safeSet("SimpleJot-current", firstNote);
           }).then(refreshNames);
         }
       }).then(function() {
-        var savedNote = null;
-        try { savedNote = localStorage.getItem("SimpleJot-current"); } catch(e) {}
-        if(savedNote !== null && getNoteNames().indexOf(savedNote) !== -1) {
+        let wanted = null;
+        try {
+          const params = new URLSearchParams(window.location.search);
+          wanted = params.get("share") || params.get("note");
+        } catch (err) {}
+        const savedNote = safeGet("SimpleJot-current");
+        if (wanted && getNoteNames().indexOf(wanted) !== -1) {
+          return openNote(wanted);
+        } else if (savedNote !== null && getNoteNames().indexOf(savedNote) !== -1) {
           return openNote(savedNote);
-        } else if(getNoteNames().length) {
-          return openNote(getNoteNames()[0]);
+        } else if (getNoteNames().length) {
+          return openNote(sortedNames(getNoteNames())[0]);
         }
       }).then(function() {
         renderNoteList();
+        setStatus("ready", "Ready");
+      }).then(function() {
+        let params = null;
+        try {
+          params = new URLSearchParams(window.location.search);
+        } catch (err) {}
+        if (!params) return;
+        const sharedText = params.get("text");
+        if (sharedText) {
+          const base = (params.get("note") || params.get("share") || defaultNoteBase).trim() || defaultNoteBase;
+          const noteName = getNoteNames().indexOf(base) !== -1 ? generateNoteName(base) : base;
+          currentNote = noteName;
+          safeSet("SimpleJot-current", noteName);
+          title.value = noteName;
+          content.value = sharedText;
+          updateCounters();
+          idbPut(noteName, sharedText).then(function() {
+            markSaved();
+            renderNoteList();
+          }).catch(function() {});
+          return;
+        }
+        const action = params.get("action");
+        if (action === "new") {
+          createNewNote();
+        } else if (action === "search") {
+          notesMenu.classList.add("notes-menu--open");
+          notesBtn.classList.add("notes-btn--active");
+          if (searchInput) searchInput.focus();
+        }
       }).catch(function() {
         renderNoteList();
       });
     }
+
     bootFromIDB();
-
-    if(localStorage.getItem("SimpleJot-theme")) {
-      var themeClass = localStorage.getItem("SimpleJot-theme");
-      document.querySelector("html").classList.add(themeClass);
-    }
-
-    if(localStorage.getItem("SimpleJot-settings")) {
-      content.style.cssText = localStorage.getItem("SimpleJot-settings");
-    }
-
-    if(localStorage.getItem("SimpleJot-settings-fs")) {
-      fs.value = localStorage.getItem("SimpleJot-settings-fs");
-    }
-
-    if(localStorage.getItem("SimpleJot-settings-lh")) {
-      lh.value = localStorage.getItem("SimpleJot-settings-lh");
-    }
-
-    if(localStorage.getItem("SimpleJot-settings-lw")) {
-      lw.value = localStorage.getItem("SimpleJot-settings-lw");
-    }
-
-
-  }else{ 
-    smoke.alert("Sorry, either your browser doesn't support LocalStorage, or you have exceeded storage limits!");
-  };
+  } else {
+    showAlert("Sorry, either your browser does not support local storage, or you have exceeded storage limits.");
+  }
 
   save.addEventListener("click", function(event) {
     event.preventDefault();
-    var blob = new Blob([content.value || content.placeholder],{type: "text/plain;charset=utf-8"});
-
-    if(title.value == "") {
-      if(currentNote) {
-        title.value = currentNote;
-        saveAs(blob, title.value + ".txt");
-        return;
-      }
-      if(content.value !== "") {
-        ensureCurrentNote().then(function() {
-          var b = new Blob([content.value || content.placeholder],{type: "text/plain;charset=utf-8"});
-          saveAs(b, title.value + ".txt");
-        });
-        return;
-      }
-
-      smoke.prompt("Please give your file a title!\n or just keep the default below.", function(e) {
-        if(e) {
-          var finalName = e;
-          if(getNoteNames().indexOf(finalName) !== -1) {
-            finalName = generateNoteName(e);
-          }
-          title.value = finalName;
-          if(finalName !== currentNote) {
-            (function(oldName, newN, val) {
-              idbPut(newN, val).then(function() {
-                clearRecovery(newN);
-                if(oldName) { idbDel(oldName).then(function() { clearRecovery(oldName); }); }
-              });
-            })(currentNote, finalName, content.value);
-            currentNote = finalName;
-            try { localStorage.setItem("SimpleJot-current", finalName); } catch(err) {}
-            renderNoteList();
-          }
-          saveAs(blob, title.value + ".txt");
-        }
-      }, {
-        reverseButtons: true,
-        value: generateNoteName(defaultNoteBase),
-        ok: "Save",
-        cancel: "Cancel"
-      });
-
-    } else {
-      saveAs(blob, title.value + ".txt");
+    if (content.value === "") {
+      showAlert("There is nothing to save yet. Write something first.");
+      return;
+    }
+    const downloadCurrent = function(name) {
+      downloadBlob(new Blob([content.value], { type: "text/plain;charset=utf-8" }), name + ".txt");
+      markSaved();
     };
-
+    const existingName = title.value.trim() || currentNote;
+    if (existingName !== "") {
+      if (!currentNote) {
+        const finalName = getNoteNames().indexOf(existingName) !== -1 ? generateNoteName(existingName) : existingName;
+        currentNote = finalName;
+        safeSet("SimpleJot-current", finalName);
+        title.value = finalName;
+        idbPut(finalName, content.value).then(function() {
+          clearRecovery(finalName);
+          markSaved();
+          renderNoteList();
+        }).catch(function(err) {
+          if (isQuotaError(err)) markError("Save failed: storage is full");
+        });
+        downloadCurrent(finalName);
+        return;
+      }
+      downloadCurrent(title.value.trim() || currentNote);
+      return;
+    }
+    showPrompt("Please give your file a title:", generateNoteName(defaultNoteBase), "Save").then(function(answer) {
+      if (answer === null) return;
+      let finalName = (answer || "").trim() || generateNoteName(defaultNoteBase);
+      if (getNoteNames().indexOf(finalName) !== -1) {
+        finalName = generateNoteName(finalName);
+      }
+      const oldName = currentNote;
+      const val = content.value;
+      currentNote = finalName;
+      safeSet("SimpleJot-current", finalName);
+      title.value = finalName;
+      idbPut(finalName, val).then(function() {
+        clearRecovery(finalName);
+        if (oldName && oldName !== finalName) {
+          idbDel(oldName).then(function() { clearRecovery(oldName); }).catch(function() {});
+        }
+        markSaved();
+        renderNoteList();
+      }).catch(function(err) {
+        if (isQuotaError(err)) markError("Save failed: storage is full");
+      });
+      downloadCurrent(finalName);
+    });
   }, false);
 
- 
-
-  clear.addEventListener("click", function(e) {
-    if(content.value == "" && title.value == "") {
-      smoke.alert("There is nothing to delete!\nGo ahead and write something first.")
-    } else {
-      smoke.confirm("This will trash your current note and clear it from SimpleJot's local data, are you sure?",function(e) {
-        if(e) {
-          if(saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
-          var doomed = currentNote;
-          var done = function() {
-            if(doomed) clearRecovery(doomed);
-            try { localStorage.removeItem('SimpleJot-current'); } catch(err) {}
-            currentNote = "";
-            title.value = "";
-            content.value = "";
-            words.innerHTML = "0:words";
-            chars.innerHTML = "0:chars";
-            renderNoteList();
-          };
-          if(doomed) { idbDel(doomed).then(done).catch(done); }
-          else done();
-        }}, {
-        reverseButtons: true,
-        ok: "YES",
-        cancel: "NO"
-      });
-    };
+  clear.addEventListener("click", function() {
+    if (content.value === "" && title.value === "") {
+      showAlert("There is nothing to delete. Go ahead and write something first.");
+      return;
+    }
+    const doomedLabel = currentNote || title.value.trim() || "this note";
+    showConfirm("Delete \u201c" + doomedLabel + "\u201d? It will be removed from this browser.", { ok: "YES", cancel: "NO" }).then(function(yes) {
+      if (!yes) return;
+      if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
+      const doomed = currentNote;
+      const done = function() {
+        if (doomed) clearRecovery(doomed);
+        safeRemove("SimpleJot-current");
+        currentNote = "";
+        title.value = "";
+        content.value = "";
+        if (previewOpen) togglePreview(false);
+        updateCounters();
+        setStatus("ready", "Ready");
+        renderNoteList();
+      };
+      if (doomed) { idbDel(doomed).then(done).catch(done); }
+      else done();
+    });
   });
-
- 
 
   settings.addEventListener("click", function() {
     this.classList.toggle("settings-btn--active");
@@ -588,99 +1247,49 @@ document.addEventListener("DOMContentLoaded", function(event) {
     refreshNames().then(renderNoteList).catch(renderNoteList);
   });
 
-  newNote.addEventListener("click", function() {
-    var prevName = currentNote, prevVal = content.value;
-    if(prevName) {
-      if(saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
-      idbPut(prevName, prevVal).then(function() { clearRecovery(prevName); }).catch(function() {
-        try { localStorage.setItem(recoveryPrefix + prevName, prevVal); } catch(e) {}
-      });
-    }
-    var autoName = generateNoteName(defaultNoteBase);
-    currentNote = autoName;
-    try { localStorage.setItem("SimpleJot-current", autoName); } catch(e) {}
-    title.value = autoName;
-    content.value = "";
-    updateCounters();
-    idbPut(autoName, "").then(function() { renderNoteList(); });
-    renderNoteList();
-    notesMenu.classList.remove("notes-menu--open");
-    notesBtn.classList.remove("notes-btn--active");
-    content.focus();
-  });
-
-  function textSettings() {
-   
-    fsValue = fs.value;
-    lhValue = lh.value;
-    lwValue = lw.value;
-
-   
-    settingValues = "font-size:" + fsValue + "em;line-height:" + lhValue + ";padding-left:" + lwValue + "em;padding-right:" + lwValue + "em;";
-    
-   
-    localStorage.setItem("SimpleJot-settings", settingValues);
-    localStorage.setItem("SimpleJot-settings-fs", fsValue);
-    localStorage.setItem("SimpleJot-settings-lh", lhValue);
-    localStorage.setItem("SimpleJot-settings-lw", lwValue);
-  };
-
- 
+  newNote.addEventListener("click", createNewNote);
 
   fs.addEventListener("input", function() {
-    val = fs.value;
+    const val = fs.value;
     content.style.fontSize = val + "em";
+    if (previewOpen) preview.style.fontSize = val + "em";
     textSettings();
   });
-
- 
 
   lh.addEventListener("input", function() {
-    val = lh.value;
+    const val = lh.value;
     content.style.lineHeight = val;
+    if (previewOpen) preview.style.lineHeight = val;
     textSettings();
   });
 
- 
-
   lw.addEventListener("input", function() {
-    val = lw.value;
+    const val = lw.value;
     content.style.paddingLeft = val + "em";
     content.style.paddingRight = val + "em";
     textSettings();
   });
 
- 
-
   theme.addEventListener("click", function() {
-    document.querySelector("html").classList.toggle("night");
-
-    var themeClass = localStorage.getItem("SimpleJot-theme");
-
-    if(themeClass == "night") {
-      localStorage.removeItem("SimpleJot-theme");
+    rootEl.classList.toggle("night");
+    if (rootEl.classList.contains("night")) {
+      safeSet("SimpleJot-theme", "night");
     } else {
-      localStorage.setItem("SimpleJot-theme", "night");
+      safeSet("SimpleJot-theme", "light");
     }
   });
 
- 
-
   reset.addEventListener("click", function() {
-    localStorage.removeItem("SimpleJot-settings");
-    localStorage.removeItem("SimpleJot-settings-fs");
-    localStorage.removeItem("SimpleJot-settings-lh");
-    localStorage.removeItem("SimpleJot-settings-lw");
-
+    safeRemove("SimpleJot-settings");
+    safeRemove("SimpleJot-settings-fs");
+    safeRemove("SimpleJot-settings-lh");
+    safeRemove("SimpleJot-settings-lw");
     content.removeAttribute("style");
-    
+    preview.removeAttribute("style");
     fs.value = 1;
     lh.value = 1.9;
     lw.value = 16;
-
   });
-
- 
 
   content.addEventListener("click", function() {
     setMenu.classList.remove("settings-menu--open");
@@ -688,13 +1297,11 @@ document.addEventListener("DOMContentLoaded", function(event) {
     notesMenu.classList.remove("notes-menu--open");
     notesBtn.classList.remove("notes-btn--active");
   });
- 
+
   start.addEventListener("click", function() {
     home.classList.remove("active");
     content.focus();
   });
-
- 
 
   info.addEventListener("click", function() {
     home.classList.add("active");
@@ -709,136 +1316,80 @@ document.addEventListener("DOMContentLoaded", function(event) {
   importBtn.addEventListener("click", function() {
     setMenu.classList.remove("settings-menu--open");
     settings.classList.remove("settings-btn--active");
-    importData();
+    fileInput.click();
   });
 
-  function exportData() {
-    flushSave().then(function() {
-      var notes = {};
-      var names = getNoteNames();
-      var chain = Promise.resolve();
-      names.forEach(function(n) {
-        chain = chain.then(function() {
-          return idbGet(n).then(function(v) { notes[n] = (v === null ? "" : v); });
-        });
-      });
-      return chain.then(function() { return notes; });
-    }).then(function(notes) {
-      var exportObj = {
-        version: note_exportversion,
-        exportedAt: new Date().toISOString(),
-        notes: notes
-      };
-      var exportStr = JSON.stringify(exportObj, null, 2);
-      var blob = new Blob([exportStr], {type: "application/json;charset=utf-8"});
-      saveAs(blob, "simplejot-export-" + Date.now() + ".json");
-    });
-  }
+  fileInput.addEventListener("change", function() {
+    handleImportFile(fileInput.files[0]);
+    fileInput.value = "";
+  });
 
-  function importData() {
-    smoke.prompt("Select a file from your computer.", function(e) {
-      if(e !== null && e.trim() !== "") {
-        processImportedNotes(e);
-      } else {
-        importFromFilePrompt();
-      }
-    }, {
-      ok: "Select file",
-      cancel: "Cancel",
-      classname: "import-prompt"
-    });
-    setTimeout(function() {
-      var cancelBtn = document.querySelector('[id^="prompt-cancel"]');
-      if(cancelBtn) {
-        cancelBtn.onclick = function() {
-          smoke.destroy("prompt");
-          importFromFilePrompt();
-        };
-      }
-    }, 0);
-  }
+  document.addEventListener("dragover", function(e) {
+    e.preventDefault();
+  });
 
-  function importFromFilePrompt() {
-    var input = document.createElement("input");
-    input.type = "file";
-    input.onchange = function(e) {
-      var file = e.target.files[0];
-      if(file) {
-        var reader = new FileReader();
-        reader.onload = function(ev) {
-          processImportedNotes(ev.target.result);
-        };
-        reader.onerror = function() {
-          smoke.alert("Failed to read file. Please try again.");
-        };
-        reader.readAsText(file);
-      }
+  document.addEventListener("drop", function(e) {
+    if (!e.dataTransfer || !e.dataTransfer.files || !e.dataTransfer.files.length) return;
+    e.preventDefault();
+    handleDroppedFile(e.dataTransfer.files[0]);
+  });
+
+  previewBtn.addEventListener("click", function() {
+    togglePreview();
+  });
+
+  shareBtn.addEventListener("click", function() {
+    if (content.value === "" && !currentNote) {
+      showAlert("There is nothing to share yet. Write something first.");
+      return;
+    }
+    const shareData = {
+      title: currentNote || "SimpleJot note",
+      text: content.value.slice(0, 4000),
+      url: currentNote ? buildShareLink() : window.location.href
     };
-    input.click();
-  }
-
-  function importFromClipboard() {
-    if(navigator.clipboard && navigator.clipboard.readText) {
-      navigator.clipboard.readText().then(function(text) {
-        processImportedNotes(text);
+    if (navigator.share) {
+      try {
+        const p = navigator.share(shareData);
+        if (p && p.catch) p.catch(function() {});
+      } catch (err) {}
+      return;
+    }
+    const link = buildShareLink();
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(link).then(function() {
+        setStatus("saved", "Link copied");
+        showAlert("Sharing is not available here, so a link to this note was copied instead.");
       }).catch(function() {
-        smoke.alert("Failed to read from clipboard. Please paste the data manually.");
+        showAlert("Sharing is not available here. Copy this link instead: " + link);
       });
     } else {
-      smoke.alert("Clipboard access is not available. Please paste the data manually.");
+      showAlert("Sharing is not available here. Copy this link instead: " + link);
     }
-  }
-
-  function processImportedNotes(dataStr) {
-    var data;
-    try {
-      data = JSON.parse(dataStr);
-    } catch(e) {
-      smoke.alert("Invalid data format. Please provide valid JSON.");
-      return;
-    }
-
-    if(!data || typeof data !== "object" || !data.notes || typeof data.notes !== "object") {
-      smoke.alert("Invalid data structure. Expected an object with a 'notes' property.");
-      return;
-    }
-
-    var noteObj = data.notes;
-    var importedCount = 0;
-    var keys = Object.keys(noteObj);
-
-    var chain = Promise.resolve();
-    keys.forEach(function(key) {
-      chain = chain.then(function() {
-        var value = noteObj[key];
-        var noteName;
-        if(key && key.trim() !== "") {
-          if(getNoteNames().indexOf(key) !== -1) {
-            noteName = generateNoteName(key);
-          } else {
-            noteName = key;
-          }
-        } else {
-          noteName = generateNoteName(defaultNoteBase);
-        }
-        return idbPut(noteName, value || "").then(function() { importedCount++; });
-      });
-    });
-    chain.then(function() {
-      if(currentNote === "" || getNoteNames().indexOf(currentNote) === -1) {
-        var firstNote = getNoteNames()[0];
-        if(firstNote) {
-          openNote(firstNote);
-        }
-      }
-      renderNoteList();
-      smoke.alert("Successfully imported " + importedCount + " note(s).");
-    });
-  }
-
-  Countable.live(content, function(counter) {
-    words.innerHTML = counter.words + ":words";
-    chars.innerHTML = counter.all + ":chars";
   });
 
+  copyBtn.addEventListener("click", function() {
+    if (content.value === "") {
+      showAlert("There is nothing to copy yet. Write something first.");
+      return;
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(content.value).then(function() {
+        setStatus("saved", "Copied to clipboard");
+      }).catch(function() {
+        showAlert("Copy failed. Please select the text and copy it manually.");
+      });
+    } else {
+      content.focus();
+      content.select();
+      try {
+        document.execCommand("copy");
+        setStatus("saved", "Copied to clipboard");
+      } catch (err) {
+        showAlert("Copy is not available. Please select the text and copy it manually.");
+      }
+    }
+  });
+
+  updateCounters();
 });
