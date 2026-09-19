@@ -33,6 +33,6 @@ Includes the following open-source libraries:
 - [Countable.js](https://github.com/RadLikeWhoa/Countable)
 
 ## License
-[MIT License](https://github.com/2nul/simplejot/blob/main/LICENSE)
+[SimpleJot Non-Commercial Attribution License](https://github.com/2nul/simplejot/blob/main/LICENSE)
 
 SimpleJot combines the beautiful interface and settings of SimpleJot with the multiple note management capabilities of Notebook to create a versatile daily note-taking tool.
