@@ -16,7 +16,7 @@ const assets = [
 self.addEventListener("install", function(event) {
   event.waitUntil(
     caches.open(cacheName).then(function(cache) {
-      return cache.addAll(assets);
+      return cache.addAll(assets).catch(function() {});
     }).then(function() {
       return self.skipWaiting();
     })
