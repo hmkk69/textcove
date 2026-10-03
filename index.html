@@ -66,11 +66,10 @@
 				</li>
 				<li class="settings-menu__item">
 					<button id="theme" title="Toggle theme" aria-label="Toggle dark theme"><svg aria-hidden="true"><use xlink:href="#icon-invert-colors"></use></svg></button>
-					<button id="reset" title="Reset to defaults" aria-label="Reset display settings"><svg aria-hidden="true"><use xlink:href="#icon-refresh"></use></svg></button>
 				</li>
 				<li class="settings-menu__item">
 					<svg aria-hidden="true"><use xlink:href="#icon-file-download"></use></svg>
-					<button id="exportData" title="Export all notes as JSON" aria-label="Export all notes as JSON">Export</button>
+					<button id="exportData" title="Keep a copy of all notes, please backup !!" aria-label="Keep a copy of all notes, please backup !!">Backup (plz)</button>
 				</li>
 				<li class="settings-menu__item">
 					<svg aria-hidden="true"><use xlink:href="#icon-file-download"></use></svg>
@@ -92,6 +91,8 @@
 			</div>
 			<ul id="noteList"></ul>
 			<button id="newNote" title="Create a new note — Ctrl+N">+ New note</button>
+			<div class="trash-tools"><button id="trashToggle" aria-expanded="false">Trash (<span id="trashCount">0</span>)</button><button id="trashEmpty">Empty</button></div>
+			<ul id="trashList" hidden></ul>
 		</div>
 	</nav>
 </header>
@@ -100,7 +101,7 @@
 	<section>
 		<svg aria-hidden="true"><use xlink:href="#logo"></use></svg>
 		<h1>SimpleJot</h1>
-		<p>A simple online notepad. No distractions, no unnecessary features. The text will live in your browser until you decide to delete it, come back anytime to continue writing. You can also download your text as a .txt file after you're finished!</p>
+		<p>A quiet notepad with no distractions. Just write, it saves on this device as you go. When something matters, keep a copy with Backup.</p>
 		<p class="offline-tip">Tip: You can use SimpleJot when offline!</p>
 		<button id="start">Start Writing</button>
 		<p class="footnote">Source code: <a href="//github.com/2nul/simplejot">2nul/simplejot</a></p>
@@ -127,6 +128,7 @@
 <footer role="contentinfo">
 	<button id="info" class="info-btn" title="Info" aria-label="Show info"><svg aria-hidden="true"><use xlink:href="#icon-info-outline"></use></svg></button>
 	<span id="saveStatus" class="save-status" role="status" aria-live="polite" data-state="ready">Ready</span>
+	<button id="storeStatus" class="store-status" title="Tap to keep a copy">Saved on this device</button>
 	<span id="netStatus" class="net-status" title="SimpleJot works offline">Tip: You can use SimpleJot when offline!</span>
 	<ul class="counter">
 		<li id="charCounter">0 chars</li>

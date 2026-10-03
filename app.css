@@ -660,6 +660,15 @@ footer {
 .night .net-status {
   color: #9aa3b2;
 }
+.store-status { position: absolute; bottom: .1em; left: 50%; transform: translateX(-50%); font-size: 70%; color: #767676; white-space: nowrap; background: none; border: 0; padding: 0; cursor: pointer; }
+.night .store-status { color: #9aa3b2; }
+.store-status[data-low="1"] { color: #b00020; }
+.trash-tools { display: flex; gap: .5em; padding: .5em 0; }
+.trash-tools button { flex: 1; padding: .4em; border-radius: 8px; }
+.trash-row { display: flex; gap: .25em; align-items: center; padding: .4em 0; border-bottom: 1px solid #eee; }
+.night .trash-row { border-bottom-color: #353c48; }
+.trash-restore { color: #4d7c0f; padding: 0 .25em; }
+@media (max-width: 48em) { .store-status { display: none; } }
 
 .visually-hidden {
   position: absolute;
@@ -966,10 +975,9 @@ header nav {
 html.night #theme:hover svg {
   fill: #ffd23e;
 }
-
-#reset:hover svg {
-  transform: scale(1.08);
-}
+#exportData { font-weight: bold; color: #4d7c0f; }
+.night #exportData { color: #b8e62e; }
+#theme { width: 100%; }
 
 .save-status {
   position: absolute;
