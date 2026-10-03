@@ -2,26 +2,27 @@
 
 [![PWA](https://img.shields.io/badge/PWA-ready-brightgreen)](https://jot.2nul.dpdns.org/)
 [![No dependencies](https://img.shields.io/badge/dependencies-zero-blue)](package.json)
-[![Tests](https://img.shields.io/badge/tests-35%20passing-brightgreen)](tests/)
+[![Tests](https://img.shields.io/badge/tests-passing-brightgreen)](tests/)
 [![License](https://img.shields.io/badge/license-non--commercial-lightgrey)](LICENSE)
 
 A fast, private, offline-ready notepad. No accounts, no tracking, no WYSIWYG clutter. Your notes live in your browser (IndexedDB + localStorage recovery) until you decide to delete or download them.
 
-**Live demo:** https://jot.2nul.dpdns.org/
+**Website:** https://jot.2nul.dpdns.org/
 
-![SimpleJot screenshot](screenshot-wide.png)
+![SimpleJot screenshot](screenshot-2026-10-03.png)
 
 ## Features
 
 - Instant autosave with a visible status (`Saving...` / `Saved • 12:03` / error states)
-- Multiple notes with search, sort (last edited / A-Z), pins, snippets and edit dates
+- Multiple notes with search (title + content), sort (last edited / A-Z), pins, snippets and edit dates
+- Delete with click-to-undo (status bar) instead of instant permanent loss
 - Markdown preview: headings, **bold**, *italic*, `code`, fenced code blocks, checklists, quotes
 - One-click `.txt` download, full JSON export, JSON file import, drag-and-drop import
 - Copy-to-clipboard and print stylesheet
 - Keyboard shortcuts: `Ctrl+S` save, `Ctrl+N` new note, `Ctrl+K` search, `Tab` indent
 - Offline-first PWA: installable, custom icons, app shortcuts
 - Online, the page checks for a newer service worker on load and on reconnect, then swaps to it automatically; offline, the newest cached copy is served
-- Theming: manual toggle plus automatic `prefers-color-scheme` support
+- Theming: manual light/dark toggle (defaults to light), deep-slate dark mode
 - Accessible: labelled controls, native `<dialog>`, live-region save status, `prefers-reduced-motion`
 
 ## Keyboard shortcuts

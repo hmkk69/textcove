@@ -1,5 +1,5 @@
 "use strict";
-const cacheName = "simplejot-be1bc1f7";
+const cacheName = "simplejot-066ab9b2";
 const assets = [
   "./",
   "./index.html",
@@ -16,7 +16,11 @@ const assets = [
 self.addEventListener("install", function(event) {
   event.waitUntil(
     caches.open(cacheName).then(function(cache) {
-      return cache.addAll(assets).catch(function() {});
+      return Promise.allSettled(
+        assets.map(function(url) {
+          return cache.add(new Request(url, { cache: "reload" }));
+        })
+      );
     }).then(function() {
       return self.skipWaiting();
     })
@@ -52,10 +56,12 @@ self.addEventListener("fetch", function(event) {
   if (event.request.mode === "navigate") {
     event.respondWith(
       fetch(event.request).then(function(response) {
-        const copy = response.clone();
-        caches.open(cacheName).then(function(cache) {
-          cache.put("./index.html", copy);
-        });
+        if (response && response.ok) {
+          const copy = response.clone();
+          caches.open(cacheName).then(function(cache) {
+            cache.put("./index.html", copy);
+          }).catch(function() {});
+        }
         return response;
       }).catch(function() {
         return caches.match("./index.html", { ignoreSearch: true });
@@ -75,11 +81,11 @@ self.addEventListener("fetch", function(event) {
   if (isAppShell) {
     event.respondWith(
       fetch(event.request).then(function(response) {
-        if (response && response.status === 200) {
+        if (response && response.ok) {
           const copy = response.clone();
           caches.open(cacheName).then(function(cache) {
             cache.put(event.request, copy);
-          });
+          }).catch(function() {});
         }
         return response;
       }).catch(function() {
@@ -94,13 +100,15 @@ self.addEventListener("fetch", function(event) {
         return cached;
       }
       return fetch(event.request).then(function(response) {
-        if (response && response.status === 200 && response.type === "basic") {
+        if (response && response.ok && response.type === "basic") {
           const copy = response.clone();
           caches.open(cacheName).then(function(cache) {
             cache.put(event.request, copy);
-          });
+          }).catch(function() {});
         }
         return response;
+      }).catch(function() {
+        return caches.match("./index.html", { ignoreSearch: true });
       });
     })
   );

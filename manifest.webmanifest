@@ -2,10 +2,14 @@
   "name": "SimpleJot",
   "short_name": "SimpleJot",
   "description": "A simple offline-ready notepad. Your text lives in your browser.",
-  "start_url": "./index.html",
+  "id": "./",
+  "start_url": "./",
   "scope": "./",
   "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone"],
   "orientation": "any",
+  "dir": "auto",
+  "lang": "en",
   "background_color": "#ffffff",
   "theme_color": "#ffffff",
   "categories": ["productivity", "utilities"],
@@ -53,13 +57,13 @@
     {
       "name": "New note",
       "short_name": "New",
-      "url": "./index.html?action=new",
+      "url": "./?action=new",
       "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
     },
     {
       "name": "Search notes",
       "short_name": "Search",
-      "url": "./index.html?action=search",
+      "url": "./?action=search",
       "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
     }
   ]

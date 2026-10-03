@@ -423,6 +423,59 @@ document.addEventListener("DOMContentLoaded", function() {
     });
   }
 
+  function idbGetAll() {
+    if (!useIdb) {
+      const out = {};
+      lsKeys().forEach(function(k) { out[k] = lsGetItem(k) || ""; });
+      return Promise.resolve(out);
+    }
+    return idbOpen().then(function(db) {
+      return new Promise(function(res, rej) {
+        try {
+          const tx = db.transaction(idbStore, "readonly");
+          const store = tx.objectStore(idbStore);
+          const out = {};
+          if (store.getAll && store.getAllKeys) {
+            const kr = store.getAllKeys();
+            const vr = store.getAll();
+            let keys = null;
+            let vals = null;
+            const done = function() {
+              if (keys !== null && vals !== null) {
+                for (let i = 0; i < keys.length; i++) {
+                  const v = vals[i];
+                  out[keys[i]] = (v && typeof v === "object" && "c" in v) ? v.c : String(v === undefined || v === null ? "" : v);
+                }
+                res(out);
+              }
+            };
+            kr.onsuccess = function() { keys = kr.result || []; done(); };
+            kr.onerror = function() { rej(kr.error); };
+            vr.onsuccess = function() { vals = vr.result || []; done(); };
+            vr.onerror = function() { rej(vr.error); };
+          } else {
+            const cur = store.openCursor();
+            cur.onsuccess = function() {
+              const c = cur.result;
+              if (c) {
+                const v = c.value;
+                out[c.key] = (v && typeof v === "object" && "c" in v) ? v.c : String(v === undefined || v === null ? "" : v);
+                c.continue();
+              } else res(out);
+            };
+            cur.onerror = function() { rej(cur.error); };
+          }
+        } catch (err) { rej(err); }
+      });
+    }).catch(function(err) {
+      if (isQuotaError(err)) throw err;
+      useIdb = false;
+      const out = {};
+      lsKeys().forEach(function(k) { out[k] = lsGetItem(k) || ""; });
+      return out;
+    });
+  }
+
   function refreshNames() {
     return idbGetAllKeys().then(function(keys) {
       namesCache = (keys || []).slice().sort();
@@ -568,84 +621,93 @@ document.addEventListener("DOMContentLoaded", function() {
     return pinned.concat(rest);
   }
 
+  function snippetFor(text) {
+    const firstLine = String(text === null || text === undefined ? "" : text).split("\n")[0].trim().slice(0, 60);
+    return firstLine === "" ? "Empty note" : firstLine;
+  }
+
   function renderNoteList() {
-    noteList.innerHTML = "";
     const q = searchInput ? searchInput.value.trim().toLowerCase() : "";
-    const names = sortedNames(getNoteNames()).filter(function(n) {
-      return q === "" || n.toLowerCase().indexOf(q) !== -1;
-    });
     const myToken = ++listToken;
-    if (!names.length) {
-      const empty = document.createElement("li");
-      empty.className = "notes-empty";
-      empty.textContent = q ? "No notes match your search." : "No notes yet.";
-      noteList.appendChild(empty);
-      return;
-    }
-    names.forEach(function(name) {
-      const li = document.createElement("li");
-      if (name === currentNote) li.className = "note--current";
-      const main = document.createElement("button");
-      main.className = "note-open";
-      main.setAttribute("data-note", name);
-      main.setAttribute("aria-label", "Open note " + name);
-      const nameSpan = document.createElement("span");
-      nameSpan.className = "note-name";
-      nameSpan.textContent = name;
-      const metaLine = document.createElement("span");
-      metaLine.className = "note-meta";
-      const snippetSpan = document.createElement("span");
-      snippetSpan.className = "note-snippet";
-      snippetSpan.textContent = "Loading...";
-      const dateSpan = document.createElement("span");
-      dateSpan.className = "note-date";
-      dateSpan.textContent = formatDate(meta[name]);
-      metaLine.appendChild(snippetSpan);
-      metaLine.appendChild(dateSpan);
-      main.appendChild(nameSpan);
-      main.appendChild(metaLine);
-      main.addEventListener("click", function() {
-        openNote(this.getAttribute("data-note"));
-        notesMenu.classList.remove("notes-menu--open");
-        notesBtn.classList.remove("notes-btn--active");
-        notesBtn.focus();
+    const paint = function(all) {
+      if (myToken !== listToken) return;
+      noteList.innerHTML = "";
+      let names = sortedNames(getNoteNames());
+      if (q !== "") {
+        names = names.filter(function(n) {
+          if (n.toLowerCase().indexOf(q) !== -1) return true;
+          const body = (n === currentNote) ? content.value : (all[n] || "");
+          return String(body).toLowerCase().indexOf(q) !== -1;
+        });
+      }
+      if (!names.length) {
+        const empty = document.createElement("li");
+        empty.className = "notes-empty";
+        empty.textContent = q ? "No notes match your search." : "No notes yet.";
+        noteList.appendChild(empty);
+        return;
+      }
+      names.forEach(function(name) {
+        const li = document.createElement("li");
+        if (name === currentNote) li.className = "note--current";
+        const main = document.createElement("button");
+        main.className = "note-open";
+        main.setAttribute("data-note", name);
+        main.setAttribute("aria-label", "Open note " + name);
+        const nameSpan = document.createElement("span");
+        nameSpan.className = "note-name";
+        nameSpan.textContent = name;
+        const metaLine = document.createElement("span");
+        metaLine.className = "note-meta";
+        const snippetSpan = document.createElement("span");
+        snippetSpan.className = "note-snippet";
+        snippetSpan.textContent = snippetFor(name === currentNote ? content.value : (all[name] || ""));
+        const dateSpan = document.createElement("span");
+        dateSpan.className = "note-date";
+        dateSpan.textContent = formatDate(meta[name]);
+        metaLine.appendChild(snippetSpan);
+        metaLine.appendChild(dateSpan);
+        main.appendChild(nameSpan);
+        main.appendChild(metaLine);
+        main.addEventListener("click", function() {
+          openNote(this.getAttribute("data-note"));
+          notesMenu.classList.remove("notes-menu--open");
+          notesBtn.classList.remove("notes-btn--active");
+          notesBtn.focus();
+        });
+        const pinBtn = document.createElement("button");
+        pinBtn.className = "note-pin" + (pins.indexOf(name) !== -1 ? " is-pinned" : "");
+        pinBtn.title = pins.indexOf(name) !== -1 ? "Unpin note" : "Pin note";
+        pinBtn.setAttribute("aria-label", (pins.indexOf(name) !== -1 ? "Unpin note " : "Pin note ") + name);
+        pinBtn.setAttribute("data-note", name);
+        pinBtn.textContent = pins.indexOf(name) !== -1 ? "\u2605" : "\u2606";
+        pinBtn.addEventListener("click", function() {
+          const n = this.getAttribute("data-note");
+          const i = pins.indexOf(n);
+          if (i === -1) pins.push(n);
+          else pins.splice(i, 1);
+          savePins();
+          renderNoteList();
+        });
+        const delBtn = document.createElement("button");
+        delBtn.className = "note-delete";
+        delBtn.title = "Delete note";
+        delBtn.setAttribute("aria-label", "Delete note " + name);
+        delBtn.setAttribute("data-note", name);
+        delBtn.textContent = "\u00d7";
+        delBtn.addEventListener("click", function() {
+          trashNote(this.getAttribute("data-note"));
+        });
+        li.appendChild(main);
+        li.appendChild(pinBtn);
+        li.appendChild(delBtn);
+        noteList.appendChild(li);
       });
-      const pinBtn = document.createElement("button");
-      pinBtn.className = "note-pin" + (pins.indexOf(name) !== -1 ? " is-pinned" : "");
-      pinBtn.title = pins.indexOf(name) !== -1 ? "Unpin note" : "Pin note";
-      pinBtn.setAttribute("aria-label", (pins.indexOf(name) !== -1 ? "Unpin note " : "Pin note ") + name);
-      pinBtn.setAttribute("data-note", name);
-      pinBtn.textContent = pins.indexOf(name) !== -1 ? "\u2605" : "\u2606";
-      pinBtn.addEventListener("click", function() {
-        const n = this.getAttribute("data-note");
-        const i = pins.indexOf(n);
-        if (i === -1) pins.push(n);
-        else pins.splice(i, 1);
-        savePins();
-        renderNoteList();
-      });
-      const delBtn = document.createElement("button");
-      delBtn.className = "note-delete";
-      delBtn.title = "Delete note";
-      delBtn.setAttribute("aria-label", "Delete note " + name);
-      delBtn.setAttribute("data-note", name);
-      delBtn.textContent = "\u00d7";
-      delBtn.addEventListener("click", function() {
-        trashNote(this.getAttribute("data-note"));
-      });
-      li.appendChild(main);
-      li.appendChild(pinBtn);
-      li.appendChild(delBtn);
-      noteList.appendChild(li);
-      idbGet(name).then(function(v) {
-        if (myToken !== listToken) return;
-        const text = String(v === null || v === undefined ? "" : v);
-        const firstLine = text.split("\n")[0].trim().slice(0, 60);
-        snippetSpan.textContent = firstLine === "" ? "Empty note" : firstLine;
-      }).catch(function() {
-        if (myToken !== listToken) return;
-        snippetSpan.textContent = "Empty note";
-      });
+    };
+    idbGetAll().then(paint).catch(function() {
+      const fallback = {};
+      if (currentNote) fallback[currentNote] = content.value;
+      paint(fallback);
     });
   }
 
@@ -653,7 +715,13 @@ document.addEventListener("DOMContentLoaded", function() {
     showConfirm("Delete note \u201c" + name + "\u201d? It will be removed from this browser.", { ok: "YES", cancel: "NO" }).then(function(yes) {
       if (!yes) return;
       if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
-      idbDel(name).then(function() {
+      idbGet(name).then(function(v) {
+        lastTrash = { name: name, value: String(v === null || v === undefined ? "" : v), pin: pins.indexOf(name) !== -1, updated: meta[name] || 0 };
+      }).catch(function() {
+        lastTrash = { name: name, value: "", pin: false, updated: 0 };
+      }).then(function() {
+        return idbDel(name);
+      }).then(function() {
         clearRecovery(name);
         if (name === currentNote) {
           currentNote = "";
@@ -661,8 +729,8 @@ document.addEventListener("DOMContentLoaded", function() {
           title.value = "";
           content.value = "";
           updateCounters();
-          setStatus("ready", "Ready");
         }
+        setStatus("saved", "Deleted \u201c" + name + "\u201d \u2022 click here to undo");
         renderNoteList();
       }).catch(function() {
         renderNoteList();
@@ -813,14 +881,19 @@ document.addEventListener("DOMContentLoaded", function() {
     }
     const noteObj = data.notes;
     let importedCount = 0;
-    const keys = Object.keys(noteObj);
+    const keys = Object.keys(noteObj).slice(0, MAX_IMPORT_NOTES);
+    if (Object.keys(noteObj).length > MAX_IMPORT_NOTES) {
+      showAlert("Backup has too many notes. Only the first " + MAX_IMPORT_NOTES + " will be imported.");
+    }
     let chain = Promise.resolve();
     keys.forEach(function(key) {
       chain = chain.then(function() {
-        const value = String(noteObj[key] === null || noteObj[key] === undefined ? "" : noteObj[key]);
+        const raw = String(noteObj[key] === null || noteObj[key] === undefined ? "" : noteObj[key]);
+        const value = raw.length > MAX_TEXT_LEN ? raw.slice(0, MAX_TEXT_LEN) : raw;
+        const cleanKey = sanitizeFileName(key);
         let noteName;
         if (key && key.trim() !== "") {
-          noteName = getNoteNames().indexOf(key) !== -1 ? generateNoteName(key) : key;
+          noteName = getNoteNames().indexOf(cleanKey) !== -1 ? generateNoteName(cleanKey) : cleanKey;
         } else {
           noteName = generateNoteName(defaultNoteBase);
         }
@@ -851,7 +924,15 @@ document.addEventListener("DOMContentLoaded", function() {
 
   function handleImportFile(file) {
     if (!file) return;
+    if (file.size && file.size > MAX_FILE_SIZE) {
+      showAlert("File is too large (max 5MB), so nothing was imported.");
+      return;
+    }
     readFileAsText(file).then(function(text) {
+      if (String(text).length > MAX_TEXT_LEN) {
+        showAlert("File is too large (max ~1M characters), so nothing was imported.");
+        return;
+      }
       processImportedNotes(text);
     }).catch(function() {
       showAlert("Failed to read file. Please try again.");
@@ -860,6 +941,10 @@ document.addEventListener("DOMContentLoaded", function() {
 
   function handleDroppedFile(file) {
     if (!file) return;
+    if (file.size && file.size > MAX_FILE_SIZE) {
+      showAlert("File is too large (max 5MB).");
+      return;
+    }
     const name = file.name || "";
     const isJson = /\.json$/i.test(name) || (file.type && file.type.indexOf("json") !== -1);
     if (isJson) {
@@ -867,7 +952,13 @@ document.addEventListener("DOMContentLoaded", function() {
       return;
     }
     readFileAsText(file).then(function(text) {
-      const base = name.replace(/\.[a-z0-9]+$/i, "") || defaultNoteBase;
+      const str = String(text || "");
+      if (str.length > MAX_TEXT_LEN) {
+        showAlert("File is too large (max ~1M characters).");
+        return;
+      }
+      const rawBase = name.replace(/\.[a-z0-9]+$/i, "") || defaultNoteBase;
+      const base = sanitizeFileName(rawBase);
       const noteName = getNoteNames().indexOf(base) !== -1 ? generateNoteName(base) : base;
       const prevName = currentNote;
       const prevVal = content.value;
@@ -893,15 +984,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
   function exportData() {
     flushSave().then(function() {
-      const notes = {};
-      const names = getNoteNames();
-      let chain = Promise.resolve();
-      names.forEach(function(n) {
-        chain = chain.then(function() {
-          return idbGet(n).then(function(v) { notes[n] = (v === null ? "" : v); });
-        });
-      });
-      return chain.then(function() { return notes; });
+      return idbGetAll();
     }).then(function(notes) {
       const exportObj = {
         version: noteExportVersion,
@@ -945,11 +1028,13 @@ document.addEventListener("DOMContentLoaded", function() {
   }
 
   function commitRename() {
-    const newName = title.value.trim();
-    if (!newName) {
+    const rawName = title.value.trim();
+    const newName = sanitizeFileName(rawName);
+    if (!rawName) {
       title.value = currentNote;
       return;
     }
+    if (newName !== rawName) title.value = newName;
     if (newName === currentNote) {
       title.value = currentNote;
       return;
@@ -986,13 +1071,67 @@ document.addEventListener("DOMContentLoaded", function() {
     });
   }
 
+  var MAX_LINE_PADDING_EM = 12;
+  var MAX_FILE_SIZE = 5 * 1024 * 1024;
+  var MAX_TEXT_LEN = 1000000;
+  var MAX_IMPORT_NOTES = 200;
+  var lastTrash = null;
+
+  function clampLineWidth(v) {
+    const n = parseFloat(v);
+    if (isNaN(n)) return 10;
+    return Math.min(MAX_LINE_PADDING_EM, Math.max(1, n));
+  }
+
+  function sanitizeFileName(name) {
+    const cleaned = String(name || "").replace(/[\\/:*?"<>|]/g, "-").trim().slice(0, 120);
+    return cleaned || defaultNoteBase;
+  }
+
+  function undoLastDelete() {
+    if (!lastTrash) {
+      showAlert("Nothing to undo.");
+      return Promise.resolve(false);
+    }
+    const t = lastTrash;
+    lastTrash = null;
+    const target = getNoteNames().indexOf(t.name) !== -1 ? generateNoteName(t.name) : t.name;
+    return idbPut(target, t.value).then(function() {
+      if (t.pin && pins.indexOf(target) === -1) {
+        pins.push(target);
+        savePins();
+      }
+      if (t.updated) {
+        meta[target] = t.updated;
+        saveMeta();
+      }
+      if (!currentNote) {
+        return openNote(target);
+      }
+      renderNoteList();
+      setStatus("saved", "Undo: restored \u201c" + target + "\u201d");
+      return true;
+    }).catch(function() {
+      showAlert("Undo failed. Storage may be full.");
+      return false;
+    });
+  }
+
   function textSettings() {
     const fsValue = fs.value;
     const lhValue = lh.value;
-    const lwValue = lw.value;
+    const lwValue = String(clampLineWidth(lw.value));
     const settingValues = "font-size:" + fsValue + "em;line-height:" + lhValue + ";padding-left:" + lwValue + "em;padding-right:" + lwValue + "em;";
-    content.style.cssText = settingValues;
-    if (previewOpen) preview.style.cssText = settingValues;
+    content.style.fontSize = fsValue + "em";
+    content.style.lineHeight = String(lhValue);
+    content.style.paddingLeft = lwValue + "em";
+    content.style.paddingRight = lwValue + "em";
+    if (previewOpen) {
+      preview.style.fontSize = fsValue + "em";
+      preview.style.lineHeight = String(lhValue);
+      preview.style.paddingLeft = lwValue + "em";
+      preview.style.paddingRight = lwValue + "em";
+    }
     safeSet("SimpleJot-settings", settingValues);
     safeSet("SimpleJot-settings-fs", fsValue);
     safeSet("SimpleJot-settings-lh", lhValue);
@@ -1000,29 +1139,37 @@ document.addEventListener("DOMContentLoaded", function() {
   }
 
   function applyStoredSettings() {
-    const stored = safeGet("SimpleJot-settings");
-    if (stored) {
-      content.style.cssText = stored;
-      preview.style.cssText = stored;
-    }
     const fsv = safeGet("SimpleJot-settings-fs");
     if (fsv) fs.value = fsv;
     const lhv = safeGet("SimpleJot-settings-lh");
     if (lhv) lh.value = lhv;
     const lwv = safeGet("SimpleJot-settings-lw");
     if (lwv) lw.value = lwv;
+    const stored = safeGet("SimpleJot-settings");
+    if (stored) {
+      content.style.fontSize = fs.value + "em";
+      content.style.lineHeight = String(lh.value);
+      content.style.paddingLeft = String(clampLineWidth(lw.value)) + "em";
+      content.style.paddingRight = String(clampLineWidth(lw.value)) + "em";
+      preview.style.fontSize = fs.value + "em";
+      preview.style.lineHeight = String(lh.value);
+      preview.style.paddingLeft = String(clampLineWidth(lw.value)) + "em";
+      preview.style.paddingRight = String(clampLineWidth(lw.value)) + "em";
+    }
   }
 
   const rootEl = document.documentElement;
 
+  function currentThemeMode() {
+    return safeGet("SimpleJot-theme") === "night" ? "night" : "light";
+  }
+
   function applyTheme() {
-    const stored = safeGet("SimpleJot-theme");
-    if (stored === "night") {
-      rootEl.classList.add("night");
-    } else if (stored === "light") {
-      rootEl.classList.remove("night");
-    } else if (window.matchMedia) {
-      rootEl.classList.toggle("night", window.matchMedia("(prefers-color-scheme: dark)").matches);
+    const night = currentThemeMode() === "night";
+    rootEl.classList.toggle("night", night);
+    if (theme) {
+      theme.title = night ? "Switch to light theme" : "Switch to dark theme";
+      theme.setAttribute("aria-label", night ? "Switch to light theme" : "Switch to dark theme");
     }
   }
 
@@ -1032,13 +1179,7 @@ document.addEventListener("DOMContentLoaded", function() {
     } catch (err) {}
 
     applyTheme();
-    if (window.matchMedia) {
-      try {
-        window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", function() {
-          if (!safeGet("SimpleJot-theme")) applyTheme();
-        });
-      } catch (err) {}
-    }
+
     applyStoredSettings();
 
     content.addEventListener("input", function() {
@@ -1070,6 +1211,15 @@ document.addEventListener("DOMContentLoaded", function() {
     });
 
     document.addEventListener("keydown", function(e) {
+      if (e.key === "Escape") {
+        setMenu.classList.remove("settings-menu--open");
+        settings.classList.remove("settings-btn--active");
+        notesMenu.classList.remove("notes-menu--open");
+        notesBtn.classList.remove("notes-btn--active");
+        notesBtn.setAttribute("aria-expanded", "false");
+        settings.setAttribute("aria-expanded", "false");
+        return;
+      }
       const mod = e.ctrlKey || e.metaKey;
       if (!mod) return;
       const key = (e.key || "").toLowerCase();
@@ -1197,10 +1347,11 @@ document.addEventListener("DOMContentLoaded", function() {
       return;
     }
     const downloadCurrent = function(name) {
-      downloadBlob(new Blob([content.value], { type: "text/plain;charset=utf-8" }), name + ".txt");
+      const safe = sanitizeFileName(name);
+      downloadBlob(new Blob([content.value], { type: "text/plain;charset=utf-8" }), safe + ".txt");
       markSaved();
     };
-    const existingName = title.value.trim() || currentNote;
+    const existingName = sanitizeFileName(title.value.trim() || currentNote);
     if (existingName !== "") {
       if (!currentNote) {
         const finalName = getNoteNames().indexOf(existingName) !== -1 ? generateNoteName(existingName) : existingName;
@@ -1222,7 +1373,7 @@ document.addEventListener("DOMContentLoaded", function() {
     }
     showPrompt("Please give your file a title:", generateNoteName(defaultNoteBase), "Save").then(function(answer) {
       if (answer === null) return;
-      let finalName = (answer || "").trim() || generateNoteName(defaultNoteBase);
+      let finalName = sanitizeFileName((answer || "").trim() || generateNoteName(defaultNoteBase));
       if (getNoteNames().indexOf(finalName) !== -1) {
         finalName = generateNoteName(finalName);
       }
@@ -1255,15 +1406,21 @@ document.addEventListener("DOMContentLoaded", function() {
       if (!yes) return;
       if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
       const doomed = currentNote;
+      const doomedVal = content.value;
+      const wasPinned = doomed ? pins.indexOf(doomed) !== -1 : false;
+      const wasUpdated = doomed ? (meta[doomed] || 0) : 0;
       const done = function() {
-        if (doomed) clearRecovery(doomed);
+        if (doomed) {
+          lastTrash = { name: doomed, value: doomedVal, pin: wasPinned, updated: wasUpdated };
+          clearRecovery(doomed);
+        }
         safeRemove("SimpleJot-current");
         currentNote = "";
         title.value = "";
         content.value = "";
         if (previewOpen) togglePreview(false);
         updateCounters();
-        setStatus("ready", "Ready");
+        setStatus("saved", doomed ? "Deleted \u201c" + doomed + "\u201d \u2022 click here to undo" : "Ready");
         renderNoteList();
       };
       if (doomed) { idbDel(doomed).then(done).catch(done); }
@@ -1303,19 +1460,15 @@ document.addEventListener("DOMContentLoaded", function() {
   });
 
   lw.addEventListener("input", function() {
-    const val = lw.value;
+    const val = String(clampLineWidth(lw.value));
     content.style.paddingLeft = val + "em";
     content.style.paddingRight = val + "em";
     textSettings();
   });
 
   theme.addEventListener("click", function() {
-    rootEl.classList.toggle("night");
-    if (rootEl.classList.contains("night")) {
-      safeSet("SimpleJot-theme", "night");
-    } else {
-      safeSet("SimpleJot-theme", "light");
-    }
+    safeSet("SimpleJot-theme", currentThemeMode() === "night" ? "light" : "night");
+    applyTheme();
   });
 
   reset.addEventListener("click", function() {
@@ -1327,7 +1480,28 @@ document.addEventListener("DOMContentLoaded", function() {
     preview.removeAttribute("style");
     fs.value = 1;
     lh.value = 1.9;
-    lw.value = 16;
+    lw.value = 10;
+  });
+
+  saveStatus.addEventListener("click", function() {
+    if (saveStatus.textContent.indexOf("undo") !== -1 && lastTrash) {
+      undoLastDelete();
+    }
+  });
+  saveStatus.style.cursor = "pointer";
+  saveStatus.title = "Click to undo delete when available";
+
+  document.addEventListener("click", function(e) {
+    const inNotes = notesMenu.contains(e.target) || notesBtn.contains(e.target);
+    const inSettings = setMenu.contains(e.target) || settings.contains(e.target);
+    if (!inNotes) {
+      notesMenu.classList.remove("notes-menu--open");
+      notesBtn.classList.remove("notes-btn--active");
+    }
+    if (!inSettings) {
+      setMenu.classList.remove("settings-menu--open");
+      settings.classList.remove("settings-btn--active");
+    }
   });
 
   content.addEventListener("click", function() {
@@ -1338,6 +1512,7 @@ document.addEventListener("DOMContentLoaded", function() {
   });
 
   start.addEventListener("click", function() {
+    safeSet("SimpleJot-seen", "1");
     home.classList.remove("active");
     content.focus();
   });
@@ -1386,19 +1561,22 @@ document.addEventListener("DOMContentLoaded", function() {
       navigator.clipboard.writeText(content.value).then(function() {
         setStatus("saved", "Copied to clipboard");
       }).catch(function() {
-        showAlert("Copy failed. Please select the text and copy it manually.");
+        content.focus();
+        content.select();
+        showAlert("Copy failed. Please press Ctrl+C to copy the selected text.");
       });
     } else {
       content.focus();
       content.select();
-      try {
-        document.execCommand("copy");
-        setStatus("saved", "Copied to clipboard");
-      } catch (err) {
-        showAlert("Copy is not available. Please select the text and copy it manually.");
-      }
+      showAlert("Copy is not available. Please press Ctrl+C to copy the selected text.");
     }
   });
+
+  try {
+    if (!safeGet("SimpleJot-seen")) home.classList.add("active");
+    else home.classList.remove("active");
+  } catch (err) {}
+  applyTheme();
 
   updateCounters();
 });
