@@ -1,16 +1,19 @@
 "use strict";
-const cacheName = "simplejot-066ab9b2";
+const cacheName = "textcove-4c26f97c";
 const assets = [
   "./",
   "./index.html",
+  "./404.html",
+  "./renamed.html",
   "./app.css",
   "./app.js",
-  "./IBMPlexMono-Regular.woff2",
+  "./boot.js",
+  "./assets/IBMPlexMono-Regular.woff2",
   "./manifest.webmanifest",
-  "./icon.svg",
-  "./icon-192.png",
-  "./icon-512.png",
-  "./icon-maskable-512.png"
+  "./assets/icon.svg",
+  "./assets/icon-192.png",
+  "./assets/icon-512.png",
+  "./assets/icon-maskable-512.png"
 ];
 
 self.addEventListener("install", function(event) {
@@ -76,6 +79,7 @@ self.addEventListener("fetch", function(event) {
     path.slice(-1) === "/" ||
     path.slice(-10) === "index.html" ||
     path.slice(-6) === "app.js" ||
+    path.slice(-7) === "boot.js" ||
     path.slice(-7) === "app.css"
   );
   if (isAppShell) {

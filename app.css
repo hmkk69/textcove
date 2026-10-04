@@ -4,7 +4,7 @@
   font-style: normal;
   font-weight: 400;
   font-display: swap;
-  src: url("IBMPlexMono-Regular.woff2") format("woff2");
+  src: url("assets/IBMPlexMono-Regular.woff2") format("woff2");
 }
 
 :root {
@@ -600,6 +600,34 @@ section button:active {
   text-align: center;
 }
 
+.notfound-code {
+  font-size: 3.5em;
+  font-weight: 400;
+  letter-spacing: .05em;
+  margin-bottom: .25em;
+}
+
+.notfound-back {
+  display: inline-block;
+  background: #a0d92e;
+  color: #fff;
+  min-width: 5em;
+  padding: .5em 1em;
+  margin-top: .5em;
+  border-radius: 10px;
+  transition: transform 180ms var(--ease-out), filter 180ms ease;
+}
+
+.notfound-back:hover {
+  color: #fff;
+  transform: scale(1.02);
+  filter: brightness(1.06);
+}
+
+.notfound-back:active {
+  transform: scale(.97);
+}
+
 a {
   color: #f92652;
   text-decoration: none;
@@ -702,6 +730,42 @@ section button,
 
 header nav {
   flex-wrap: wrap;
+}
+
+.rename-banner {
+  position: relative;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: .75em;
+  max-width: 46em;
+  margin: 0 auto .75em;
+  padding: .45em .8em;
+  font-size: .85em;
+  text-align: center;
+  color: #383838;
+  background: #f2f7e4;
+  border: 1px solid var(--accent-green);
+  border-radius: .5em;
+}
+
+.rename-banner[hidden] {
+  display: none;
+}
+
+html.night .rename-banner {
+  color: #e8eaf0;
+  background: #232a1f;
+}
+
+.rename-banner button {
+  flex: none;
+  padding: 0 .5em;
+  font-size: 1.1em;
+  line-height: 1.4;
+  cursor: pointer;
+  background: transparent;
 }
 
 .btn-group {
@@ -975,8 +1039,29 @@ header nav {
 html.night #theme:hover svg {
   fill: #ffd23e;
 }
-#exportData { font-weight: bold; color: #4d7c0f; }
+#exportData, #importData {
+  display: block;
+  width: 100%;
+  text-align: left;
+  font-weight: bold;
+}
+#exportData { color: #4d7c0f; }
 .night #exportData { color: #b8e62e; }
+.settings-menu__item--compact {
+  padding: .6em 0;
+  border-bottom: 0;
+}
+#resetSettings {
+  display: block;
+  width: 100%;
+  padding: .2em 0;
+  font-size: .85em;
+  text-align: center;
+  color: #767676;
+}
+#resetSettings:hover { color: #f92652; }
+.night #resetSettings { color: #9aa3b2; }
+.night #resetSettings:hover { color: #ff8fab; }
 #theme { width: 100%; }
 
 .save-status {

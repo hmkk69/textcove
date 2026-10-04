@@ -1,4 +1,6 @@
-# SimpleJot
+# TextCove
+
+### Formely known as [SimpleJot](https://github.com/2nul/simplejot)
 
 [![PWA](https://img.shields.io/badge/PWA-ready-brightgreen)](https://jot.2nul.dpdns.org/)
 [![No dependencies](https://img.shields.io/badge/dependencies-zero-blue)](package.json)
@@ -7,9 +9,9 @@
 
 A fast, private, offline-ready notepad. No accounts, no tracking, no WYSIWYG clutter. Your notes live in your browser (IndexedDB + localStorage recovery) until you decide to delete or download them.
 
-**Website:** https://jot.2nul.dpdns.org/
+**Website:** https://tc.2nul.dpdns.org/ or https://textcove.pages.dev
 
-![SimpleJot screenshot](screenshot-2026-10-03.png)
+![TextCove screenshot](assets/screenshot-2026-10-03.png)
 
 ## Features
 
@@ -44,20 +46,21 @@ A fast, private, offline-ready notepad. No accounts, no tracking, no WYSIWYG clu
 ## File structure
 
 ```
-simplejot/
+textcove/
 ├── index.html          # App shell, SEO tags, native dialog
+├── 404.html            # Not-found page
 ├── app.css             # Styling, responsive, print, reduced-motion
 ├── app.js              # Application logic, no dependencies
+├── boot.js             # Service-worker registration, theme, dev reload
 ├── sw.js               # Service worker (cache name stamped by npm run build)
 ├── manifest.webmanifest# PWA manifest with icons and app shortcuts
-├── icon.svg            # Source icon
-├── icon-192.png        # PWA icon
-├── icon-512.png        # PWA icon
-├── icon-maskable-512.png
+├── assets/             # Icons, screenshots, webfont
+├── serve-local.mjs     # Dev server with live reload (older variant)
 ├── robots.txt
 ├── sitemap.xml
 ├── package.json        # build / test / check scripts
 ├── scripts/build.mjs   # Stamps a content hash into sw.js
+├── scripts/serve-local.mjs # Dev server used by npm run dev
 └── tests/              # node:test suites (no extra dependencies)
 ```
 
@@ -77,4 +80,4 @@ The previously vendored FileSaver.js, Smoke.js and Countable.js helpers were rep
 
 ## License
 
-[SimpleJot Non-Commercial Attribution License](https://github.com/2nul/simplejot/blob/main/LICENSE)
+[TextCove Non-Commercial Attribution License](https://github.com/2nul/TextCove/blob/main/LICENSE)

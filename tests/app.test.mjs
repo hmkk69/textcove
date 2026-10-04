@@ -88,14 +88,17 @@ describe("notes, markdown, shortcuts, sharing", () => {
 describe("project files", () => {
   const required = [
     "index.html",
+    "404.html",
+    "renamed.html",
     "app.css",
     "app.js",
+    "boot.js",
     "sw.js",
     "manifest.webmanifest",
-    "icon.svg",
-    "icon-192.png",
-    "icon-512.png",
-    "icon-maskable-512.png",
+    "assets/icon.svg",
+    "assets/icon-192.png",
+    "assets/icon-512.png",
+    "assets/icon-maskable-512.png",
     "robots.txt",
     "sitemap.xml",
     "package.json"

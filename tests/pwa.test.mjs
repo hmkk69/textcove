@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
 const html = readFileSync("index.html", "utf8");
+const boot = readFileSync("boot.js", "utf8");
 const manifest = JSON.parse(readFileSync("manifest.webmanifest", "utf8"));
 const sw = readFileSync("sw.js", "utf8");
 
@@ -22,7 +23,7 @@ describe("PWA manifest", () => {
 
 describe("service worker", () => {
   it("activates updates immediately and cleans old caches", () => {
-    assert.ok(/simplejot-[0-9a-f]{8}/.test(sw), "cache name is not build-stamped");
+    assert.ok(/textcove-[0-9a-f]{8}/.test(sw), "cache name is not build-stamped");
     assert.ok(!sw.includes("__BUILD_HASH__"), "placeholder was not replaced");
     assert.ok(sw.includes("SKIP_WAITING"), "missing instant-update handshake");
     assert.ok(sw.includes("skipWaiting"), "missing skipWaiting");
@@ -30,9 +31,11 @@ describe("service worker", () => {
     assert.ok(sw.includes("caches.delete"), "missing old-cache cleanup");
   });
   it("registers safely and polls for updates", () => {
-    assert.ok(html.includes("reg.update()"), "page never polls for a newer worker");
-    assert.ok(html.includes("controllerchange"), "page never swaps to the new worker");
-    assert.ok(html.includes("https:"), "worker must only register on http(s)");
+    assert.ok(html.includes('src="boot.js"'), "page does not load the boot script");
+    assert.ok(!html.includes("<script>"), "inline script must live in boot.js");
+    assert.ok(boot.includes("reg.update()"), "page never polls for a newer worker");
+    assert.ok(boot.includes("controllerchange"), "page never swaps to the new worker");
+    assert.ok(boot.includes("https:"), "worker must only register on http(s)");
   });
 });
 

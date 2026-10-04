@@ -17,8 +17,8 @@ describe("logo and homepage", () => {
     assert.ok(html.includes("overlay active"), "homepage should start active");
     assert.ok(html.includes('role="dialog"'), "homepage should be a dialog");
   });
-  it("remembers onboarding with SimpleJot-seen", () => {
-    assert.ok(app.includes("SimpleJot-seen"), "missing seen flag");
+  it("remembers onboarding with TextCove-seen", () => {
+    assert.ok(app.includes("TextCove-seen"), "missing seen flag");
   });
 });
 
@@ -53,8 +53,8 @@ describe("safe delete with undo", () => {
 
 describe("import and filename safety", () => {
   it("limits file size and note count", () => {
-    assert.ok(app.includes("MAX_FILE_SIZE"), "missing size cap");
-    assert.ok(app.includes("MAX_IMPORT_NOTES"), "missing import cap");
+    assert.ok(app.includes("maxFileSize"), "missing size cap");
+    assert.ok(app.includes("maxImportNotes"), "missing import cap");
   });
   it("sanitizes file names", () => {
     assert.ok(app.includes("function sanitizeFileName"), "missing sanitizer");
@@ -73,8 +73,14 @@ describe("menus and theme", () => {
     assert.ok(app.includes('"night"') && app.includes('"light"'), "missing theme modes");
     assert.ok(!app.includes('"auto"'), "auto mode must be gone, default is light");
   });
+  it("shows sun and moon for the theme switch", () => {
+    assert.ok(html.includes('id="icon-sun"'), "missing sun symbol");
+    assert.ok(html.includes('id="icon-moon"'), "missing moon symbol");
+    assert.ok(html.includes('id="themeIcon"'), "theme icon has no hook");
+    assert.ok(app.includes('"#icon-sun"') && app.includes('"#icon-moon"'), "theme never swaps its icon");
+  });
   it("footer shows only the offline tip", () => {
-    assert.ok(html.includes("Tip: You can use SimpleJot when offline!"), "missing tip");
+    assert.ok(html.includes("Tip: You can use TextCove when offline!"), "missing tip");
     assert.ok(!html.includes("netStatusText"), "badge text must be gone");
     assert.ok(!html.includes('class="dot"'), "dot badge must be gone");
   });
@@ -88,6 +94,28 @@ describe("menus and theme", () => {
     assert.ok(css.includes("dialog-in"), "missing dialog entrance");
     assert.ok(css.includes("--ease-out"), "missing shared easing curve");
     assert.ok(!css.includes("rotate("), "rotation wiggles must be gone");
+  });
+});
+
+describe("renamed page", () => {
+  it("explains the rename and links home", () => {
+    const renamed = readFileSync("renamed.html", "utf8");
+    assert.ok(renamed.includes("TextCove"), "missing new name");
+    assert.ok(renamed.includes("SimpleJot"), "must mention the old name");
+    assert.ok(renamed.includes('href="./"'), "missing back-to-home link");
+    assert.ok(renamed.includes('src="boot.js"'), "must load the boot script for theme");
+  });
+});
+
+describe("oversized note guard", () => {
+  it("never loads a huge note into the editor", () => {
+    assert.ok(app.includes("loadSafeLimit"), "missing load size cap");
+    assert.ok(app.includes("handleOversizedNote"), "missing oversized handler");
+    assert.ok(app.includes("openFallbackNote"), "must fall back to a safe note");
+  });
+  it("backs up before clearing", () => {
+    assert.ok(app.includes("Download backup"), "must offer a backup download first");
+    assert.ok(app.includes("Clear this note"), "must confirm before clearing");
   });
 });
 

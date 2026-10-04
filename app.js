@@ -32,6 +32,7 @@ document.addEventListener("DOMContentLoaded", function() {
   const lh = document.getElementById("lh");
   const lw = document.getElementById("lw");
   const theme = document.getElementById("theme");
+  const themeIcon = document.getElementById("themeIcon");
   const info = document.getElementById("info");
   const chars = document.getElementById("charCounter");
   const words = document.getElementById("wordCounter");
@@ -48,11 +49,14 @@ document.addEventListener("DOMContentLoaded", function() {
   const preview = document.getElementById("preview");
   const previewBody = document.getElementById("previewBody");
   const copyBtn = document.getElementById("copyNote");
+  const resetBtn = document.getElementById("resetSettings");
   const dialog = document.getElementById("appDialog");
   const dialogMessage = document.getElementById("dialogMessage");
   const dialogInput = document.getElementById("dialogInput");
   const dialogOk = document.getElementById("dialogOk");
   const dialogCancel = document.getElementById("dialogCancel");
+  const renameBanner = document.getElementById("renameBanner");
+  const renameClose = document.getElementById("renameClose");
 
   let dialogResolve = null;
 
@@ -162,6 +166,11 @@ document.addEventListener("DOMContentLoaded", function() {
   }
 
   function updateCounters() {
+    if (content.value.length > loadSafeLimit) {
+      chars.textContent = content.value.length + " chars";
+      words.textContent = "too large to count";
+      return;
+    }
     const counter = countText(content.value);
     words.textContent = counter.words + " words";
     chars.textContent = counter.all + " chars";
@@ -212,20 +221,21 @@ document.addEventListener("DOMContentLoaded", function() {
     }
   }
 
-  const notesPrefix = "SimpleJot-note:";
-  const recoveryPrefix = "SimpleJot-recovery:";
+  const notesPrefix = "TextCove-note:";
+  const recoveryPrefix = "TextCove-recovery:";
   const noteExportVersion = "1.0";
+  const loadSafeLimit = 1024 * 1024;
   const defaultNoteBase = "New note";
-  const pinKey = "SimpleJot-pins";
-  const metaKey = "SimpleJot-meta";
-  const trashKey = "SimpleJot-trash-v1";
-  const backupKey = "SimpleJot-lastBackup";
+  const pinKey = "TextCove-pins";
+  const metaKey = "TextCove-meta";
+  const trashKey = "TextCove-trash-v1";
+  const backupKey = "TextCove-lastBackup";
   let currentNote = "";
   let shownNote = "";
   let dirty = false;
-  const idbName = "SimpleJot";
+  const idbName = "TextCove";
   const idbStore = "notes";
-  const SAVE_DELAY = 250;
+  const saveDelay = 250;
   const recoveryThrottle = 1500;
   var mirrorLimit = 100000;
   var trashMax = 30;
@@ -237,6 +247,42 @@ document.addEventListener("DOMContentLoaded", function() {
   let lastRecoveryWrite = 0;
   let listToken = 0;
   let previewOpen = false;
+  const legacyPrefix = "SimpleJot-";
+  const legacyNotesPrefix = "SimpleJot-note:";
+  const legacyRecoveryPrefix = "SimpleJot-recovery:";
+  const legacyIdbName = "SimpleJot";
+  const brandSingleKeys = ["pins", "meta", "trash-v1", "lastBackup", "current", "settings", "settings-fs", "settings-lh", "settings-lw", "sort", "theme", "seen"];
+  function migrateBrandKeys() {
+    try {
+      brandSingleKeys.forEach(function(suffix) {
+        const oldK = legacyPrefix + suffix, newK = "TextCove-" + suffix;
+        if (safeGet(newK) === null) {
+          const v = safeGet(oldK);
+          if (v !== null) safeSet(newK, v);
+        }
+        safeRemove(oldK);
+      });
+      [[legacyNotesPrefix, notesPrefix], [legacyRecoveryPrefix, recoveryPrefix]].forEach(function(pair) {
+        const from = pair[0], to = pair[1];
+        const pending = [];
+        try {
+          for (let i = 0; i < localStorage.length; i++) {
+            const k = localStorage.key(i);
+            if (k && k.indexOf(from) === 0) pending.push(k);
+          }
+        } catch (err) {}
+        Object.keys(mem).forEach(function(k) {
+          if (k.indexOf(from) === 0 && pending.indexOf(k) === -1) pending.push(k);
+        });
+        pending.forEach(function(k) {
+          const name = k.slice(from.length);
+          if (safeGet(to + name) === null) safeSet(to + name, safeGet(k) || "");
+          safeRemove(k);
+        });
+      });
+    } catch (err) {}
+  }
+  migrateBrandKeys();
   let pins = [];
   let meta = {};
 
@@ -277,11 +323,11 @@ document.addEventListener("DOMContentLoaded", function() {
   function pruneTrash() { setTrash(getTrash().filter(function(x) { return Date.now() - (x.deletedAt || 0) < trashDays * 864e5; })); }
   function markBackup() { safeSet(backupKey, String(Date.now())); }
   function needBackup() { const t = parseInt(safeGet(backupKey) || "0", 10) || 0; return Date.now() - t > backupDays * 864e5; }
-  function opfsBackup(n) { try { if (!navigator.storage || !navigator.storage.getDirectory) return Promise.resolve(); return navigator.storage.getDirectory().then(function(d) { return d.getFileHandle("simplejot-backup.json", { create: true }); }).then(function(h) { return h.createWritable().then(function(w) { return w.write(JSON.stringify({ version: noteExportVersion, exportedAt: new Date().toISOString(), notes: n })).then(function() { return w.close(); }); }).catch(function() {}); }).catch(function() {}); } catch (err) { return Promise.resolve(); } }
+  function opfsBackup(n) { try { if (!navigator.storage || !navigator.storage.getDirectory) return Promise.resolve(); return navigator.storage.getDirectory().then(function(d) { return d.getFileHandle("textcove-backup.json", { create: true }); }).then(function(h) { return h.createWritable().then(function(w) { return w.write(JSON.stringify({ version: noteExportVersion, exportedAt: new Date().toISOString(), notes: n })).then(function() { return w.close(); }); }).catch(function() {}); }).catch(function() {}); } catch (err) { return Promise.resolve(); } }
   function refreshStoreStatus() { try { if (!navigator.storage || !navigator.storage.estimate) { try { storeStatus.textContent = "Saved on this device"; } catch (err) {} return; } navigator.storage.estimate().then(function(e) { const q = e.quota || 0, l = q - (e.usage || 0); const s = q ? (l > 1073741824 ? (l / 1073741824).toFixed(1) + "GB" : Math.max(1, Math.round(l / 1048576)) + "MB") : ""; try { storeStatus.textContent = s ? "Saved on this device, " + s + " free" : "Saved on this device"; } catch (err) {} if (q && l < 104857600) markError("Running low on space, export soon"); }).catch(function() {}); } catch (err) {} }
   function initPersist() { try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(function() {}); } catch (err) {} refreshStoreStatus(); }
   function stashPrev() { const pn = currentNote, pv = content.value; if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; } if (!pn || shownNote !== pn) return Promise.resolve(); return idbPut(pn, pv).then(function() { clearRecovery(pn); }).catch(function() { safeSet(recoveryPrefix + pn, pv); mirrorPut(pn, pv); }); }
-  function rescueMirrors() { const m = mirrorAll(), ks = Object.keys(m).slice(0, MAX_IMPORT_NOTES); if (!ks.length) return Promise.resolve(0); let c = Promise.resolve(), n = 0; ks.forEach(function(k) { c = c.then(function() { return idbPut(sanitizeFileName(k) || generateNoteName(defaultNoteBase), String(m[k] || "").slice(0, MAX_TEXT_LEN)).then(function() { n++; }).catch(function() {}); }); }); return c.then(function() { return refreshNames().then(function() { return n; }); }); }
+  function rescueMirrors() { const m = mirrorAll(), ks = Object.keys(m).slice(0, maxImportNotes); if (!ks.length) return Promise.resolve(0); let c = Promise.resolve(), n = 0; ks.forEach(function(k) { c = c.then(function() { return idbPut(sanitizeFileName(k) || generateNoteName(defaultNoteBase), String(m[k] || "").slice(0, maxTextLen)).then(function() { n++; }).catch(function() {}); }); }); return c.then(function() { return refreshNames().then(function() { return n; }); }); }
 
   let useIdb = typeof indexedDB !== "undefined";
 
@@ -377,6 +423,68 @@ document.addEventListener("DOMContentLoaded", function() {
       if (isQuotaError(err)) throw err;
       useIdb = false;
       return lsDelItem(name);
+    });
+  }
+
+  function migrateIdbFromLegacy() {
+    return new Promise(function(resolve) {
+      try {
+        if (typeof indexedDB === "undefined") { resolve(); return; }
+        let fresh = false;
+        const openReq = indexedDB.open(legacyIdbName, 1);
+        openReq.onupgradeneeded = function() { fresh = true; };
+        openReq.onsuccess = function() {
+          const db = openReq.result;
+          const done = function() { try { db.close(); } catch (err) {} resolve(); };
+          if (fresh) {
+            done();
+            try { indexedDB.deleteDatabase(legacyIdbName); } catch (err) {}
+            return;
+          }
+          let names = [];
+          try { names = Array.prototype.slice.call(db.objectStoreNames); } catch (err) {}
+          if (names.indexOf(idbStore) === -1) { done(); return; }
+          let entries = [];
+          let finished = false;
+          const finish = function() {
+            if (finished) return;
+            finished = true;
+            let chain = Promise.resolve();
+            entries.forEach(function(e) {
+              chain = chain.then(function() {
+                const v = e.v;
+                let text = "";
+                if (typeof v === "object" && v !== null && "c" in v) text = v.c;
+                else if (v !== undefined && v !== null) text = String(v);
+                return idbGet(String(e.k)).then(function(existing) {
+                  if (existing === null || existing === undefined || existing === "") {
+                    return idbPut(String(e.k), text).catch(function() {});
+                  }
+                }).catch(function() {});
+              });
+            });
+            chain.then(function() {
+              done();
+              try { indexedDB.deleteDatabase(legacyIdbName); } catch (err) {}
+            });
+          };
+          try {
+            const tx = db.transaction(idbStore, "readonly");
+            const store = tx.objectStore(idbStore);
+            const cursorReq = store.openCursor();
+            cursorReq.onsuccess = function() {
+              const cursor = cursorReq.result;
+              if (cursor) { entries.push({ k: cursor.key, v: cursor.value }); cursor.continue(); return; }
+              finish();
+            };
+            cursorReq.onerror = function() { finish(); };
+            tx.onabort = function() { finish(); };
+            tx.onerror = function() { finish(); };
+          } catch (err) { done(); }
+        };
+        openReq.onerror = function() { resolve(); };
+        openReq.onblocked = function() { resolve(); };
+      } catch (err) { resolve(); }
     });
   }
 
@@ -512,7 +620,7 @@ document.addEventListener("DOMContentLoaded", function() {
   function requestSave() {
     dirty = true; shownNote = currentNote; markSaving();
     if (saveTimer) clearTimeout(saveTimer);
-    saveTimer = setTimeout(flushSave, SAVE_DELAY);
+    saveTimer = setTimeout(flushSave, saveDelay);
     scheduleRecovery();
   }
 
@@ -531,7 +639,7 @@ document.addEventListener("DOMContentLoaded", function() {
     if (currentNote) return Promise.resolve(currentNote);
     const autoName = generateNoteName(defaultNoteBase);
     currentNote = autoName; shownNote = autoName; dirty = false;
-    safeSet("SimpleJot-current", autoName);
+    safeSet("TextCove-current", autoName);
     title.value = autoName;
     return idbPut(autoName, content.value).then(function() {
       markSaved();
@@ -544,17 +652,19 @@ document.addEventListener("DOMContentLoaded", function() {
   }
 
   let openSeq = 0;
+  let oversizeWarnedName = "";
 
   function openNote(name) {
     const mySeq = ++openSeq;
     const sp = stashPrev();
     currentNote = name; shownNote = ""; dirty = false;
-    safeSet("SimpleJot-current", name);
+    safeSet("TextCove-current", name);
     title.value = name;
     if (previewOpen) togglePreview(false);
     const rec = safeGet(recoveryPrefix + name);
     const load = function() {
       if (rec !== null && rec !== undefined) {
+        if (String(rec).length > loadSafeLimit) { handleOversizedNote(name, String(rec)); return Promise.resolve(name); }
         content.value = rec; shownNote = name;
         updateCounters();
         idbPut(name, rec).then(function() { clearRecovery(name); }).catch(function() {});
@@ -564,7 +674,9 @@ document.addEventListener("DOMContentLoaded", function() {
       }
       return idbGet(name).then(function(v) {
         if (mySeq !== openSeq || currentNote !== name) return;
-        content.value = (v === null || v === undefined) ? "" : v; shownNote = name;
+        const text = (v === null || v === undefined) ? "" : String(v);
+        if (text.length > loadSafeLimit) { handleOversizedNote(name, text); return; }
+        content.value = text; shownNote = name;
         updateCounters();
         renderNoteList();
       }).catch(function() {
@@ -574,6 +686,47 @@ document.addEventListener("DOMContentLoaded", function() {
       });
     };
     return sp.then(load).catch(load);
+  }
+
+  function formatSize(chars) {
+    if (chars >= 1048576) return (chars / 1048576).toFixed(1) + " MB";
+    if (chars >= 1024) return Math.round(chars / 1024) + " KB";
+    return chars + " chars";
+  }
+
+  function openFallbackNote(exclude) {
+    const others = getNoteNames().filter(function(n) { return n !== exclude; });
+    if (others.length) return openNote(sortedNames(others)[0]);
+    createNewNote();
+  }
+
+  function handleOversizedNote(name, value) {
+    const size = formatSize(String(value).length);
+    setStatus("error", "Note too large to open");
+    showConfirm("Note \u201c" + name + "\u201d is too large (" + size + ") for the app to open safely. Loading it may freeze this page. Please download a backup copy first.", { ok: "Download backup", cancel: "Later" }).then(function(wantsDownload) {
+      if (!wantsDownload) { openFallbackNote(name); return; }
+      try {
+        downloadBlob(new Blob([value], { type: "text/plain;charset=utf-8" }), sanitizeFileName(name) + ".txt");
+        setStatus("saved", "Backup downloaded");
+      } catch (err) {
+        showAlert("Backup download failed. The note was kept. Please try again.");
+        openFallbackNote(name);
+        return;
+      }
+      showConfirm("Backup downloaded. This note (" + size + ") will now be cleared entirely so the app can load again. Only continue if you have saved the downloaded file.", { ok: "Clear this note", cancel: "Keep note" }).then(function(yes) {
+        if (!yes) { openFallbackNote(name); return; }
+        if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
+        idbDel(name).then(function() {
+          clearRecovery(name);
+          setStatus("saved", "Cleared oversized note");
+          showAlert("Note \u201c" + name + "\u201d was cleared. Your downloaded backup keeps its content.");
+          openFallbackNote(name);
+        }).catch(function() {
+          showAlert("Could not clear the note. Please try again.");
+          openFallbackNote(name);
+        });
+      });
+    });
   }
 
   function formatDate(ts) {
@@ -602,7 +755,8 @@ document.addEventListener("DOMContentLoaded", function() {
   }
 
   function snippetFor(text) {
-    const firstLine = String(text === null || text === undefined ? "" : text).split("\n")[0].trim().slice(0, 60);
+    const head = String(text === null || text === undefined ? "" : text).slice(0, 200);
+    const firstLine = head.split("\n")[0].trim().slice(0, 60);
     return firstLine === "" ? "Empty note" : firstLine;
   }
 
@@ -617,6 +771,7 @@ document.addEventListener("DOMContentLoaded", function() {
         names = names.filter(function(n) {
           if (n.toLowerCase().indexOf(q) !== -1) return true;
           const body = (n === currentNote) ? content.value : (all[n] || "");
+          if (String(body).length > loadSafeLimit) return false;
           return String(body).toLowerCase().indexOf(q) !== -1;
         });
       }
@@ -705,7 +860,7 @@ document.addEventListener("DOMContentLoaded", function() {
         clearRecovery(name);
         if (name === currentNote) {
           currentNote = ""; shownNote = ""; dirty = false;
-          safeRemove("SimpleJot-current");
+          safeRemove("TextCove-current");
           title.value = "";
           content.value = "";
           updateCounters();
@@ -724,13 +879,17 @@ document.addEventListener("DOMContentLoaded", function() {
   function migrateFromLocalStorage() {
     const batch = [];
     try {
-      if (localStorage.getItem("SimpleJot-title") !== null || localStorage.getItem("SimpleJot-content") !== null) {
-        const legacyTitle = localStorage.getItem("SimpleJot-title") || "Untitled";
-        const legacyContent = localStorage.getItem("SimpleJot-content") || "";
+      const legacyTitleKey = localStorage.getItem("TextCove-title") !== null ? "TextCove-title" : "SimpleJot-title";
+      const legacyContentKey = localStorage.getItem("TextCove-content") !== null ? "TextCove-content" : "SimpleJot-content";
+      if (localStorage.getItem(legacyTitleKey) !== null || localStorage.getItem(legacyContentKey) !== null) {
+        const legacyTitle = localStorage.getItem(legacyTitleKey) || localStorage.getItem("TextCove-title") || localStorage.getItem("SimpleJot-title") || "Untitled";
+        const legacyContent = localStorage.getItem(legacyContentKey) || "";
         batch.push({ k: legacyTitle, v: legacyContent });
+        localStorage.removeItem("TextCove-title");
+        localStorage.removeItem("TextCove-content");
         localStorage.removeItem("SimpleJot-title");
         localStorage.removeItem("SimpleJot-content");
-        safeSet("SimpleJot-current", legacyTitle);
+        safeSet("TextCove-current", legacyTitle);
       }
       const toRemove = [];
       for (let i = 0; i < localStorage.length; i++) {
@@ -746,7 +905,7 @@ document.addEventListener("DOMContentLoaded", function() {
       });
       return chain.then(function() {
         toRemove.forEach(function(k) { try { const v = localStorage.getItem(k) || mem[k] || ""; if (String(v).length > mirrorLimit) safeRemove(k); } catch (err) {} });
-        safeSet("SimpleJot-migrated-idb-v1", "1");
+        safeSet("TextCove-migrated-idb-v1", "1");
       });
     } catch (err) { return Promise.resolve(); }
   }
@@ -864,15 +1023,15 @@ document.addEventListener("DOMContentLoaded", function() {
     }
     const noteObj = data.notes;
     let importedCount = 0;
-    const keys = Object.keys(noteObj).slice(0, MAX_IMPORT_NOTES);
-    if (Object.keys(noteObj).length > MAX_IMPORT_NOTES) {
-      showAlert("Backup has too many notes. Only the first " + MAX_IMPORT_NOTES + " will be imported.");
+    const keys = Object.keys(noteObj).slice(0, maxImportNotes);
+    if (Object.keys(noteObj).length > maxImportNotes) {
+      showAlert("Backup has too many notes. Only the first " + maxImportNotes + " will be imported.");
     }
     let chain = Promise.resolve();
     keys.forEach(function(key) {
       chain = chain.then(function() {
         const raw = String(noteObj[key] === null || noteObj[key] === undefined ? "" : noteObj[key]);
-        const value = raw.length > MAX_TEXT_LEN ? raw.slice(0, MAX_TEXT_LEN) : raw;
+        const value = raw.length > maxTextLen ? raw.slice(0, maxTextLen) : raw;
         const cleanKey = sanitizeFileName(key);
         let noteName;
         if (key && key.trim() !== "") {
@@ -907,12 +1066,12 @@ document.addEventListener("DOMContentLoaded", function() {
 
   function handleImportFile(file) {
     if (!file) return;
-    if (file.size && file.size > MAX_FILE_SIZE) {
+    if (file.size && file.size > maxFileSize) {
       showAlert("File is too large (max 5MB), so nothing was imported.");
       return;
     }
     readFileAsText(file).then(function(text) {
-      if (String(text).length > MAX_TEXT_LEN) {
+      if (String(text).length > maxTextLen) {
         showAlert("File is too large (max ~1M characters), so nothing was imported.");
         return;
       }
@@ -924,7 +1083,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
   function handleDroppedFile(file) {
     if (!file) return;
-    if (file.size && file.size > MAX_FILE_SIZE) {
+    if (file.size && file.size > maxFileSize) {
       showAlert("File is too large (max 5MB).");
       return;
     }
@@ -936,7 +1095,7 @@ document.addEventListener("DOMContentLoaded", function() {
     }
     readFileAsText(file).then(function(text) {
       const str = String(text || "");
-      if (str.length > MAX_TEXT_LEN) {
+      if (str.length > maxTextLen) {
         showAlert("File is too large (max ~1M characters).");
         return;
       }
@@ -945,7 +1104,7 @@ document.addEventListener("DOMContentLoaded", function() {
       const noteName = getNoteNames().indexOf(base) !== -1 ? generateNoteName(base) : base;
       stashPrev();
       currentNote = noteName; shownNote = noteName; dirty = false;
-      safeSet("SimpleJot-current", noteName);
+      safeSet("TextCove-current", noteName);
       title.value = noteName;
       content.value = String(text || "");
       updateCounters();
@@ -965,7 +1124,7 @@ document.addEventListener("DOMContentLoaded", function() {
       return idbGetAll();
     }).then(function(notes) {
       const exportObj = { version: noteExportVersion, exportedAt: new Date().toISOString(), notes: notes };
-      downloadBlob(new Blob([JSON.stringify(exportObj, null, 2)], { type: "application/json;charset=utf-8" }), "simplejot-export-" + Date.now() + ".json");
+      downloadBlob(new Blob([JSON.stringify(exportObj, null, 2)], { type: "application/json;charset=utf-8" }), "textcove-export-" + Date.now() + ".json");
       markBackup(); opfsBackup(notes); refreshStoreStatus();
     }).catch(function(err) {
       if (isQuotaError(err)) showAlert("Storage is full, so the export could not be prepared.");
@@ -976,7 +1135,7 @@ document.addEventListener("DOMContentLoaded", function() {
     stashPrev();
     const autoName = generateNoteName(defaultNoteBase);
     currentNote = autoName; shownNote = autoName; dirty = false;
-    safeSet("SimpleJot-current", autoName);
+    safeSet("TextCove-current", autoName);
     title.value = autoName;
     content.value = "";
     if (previewOpen) togglePreview(false);
@@ -1016,7 +1175,7 @@ document.addEventListener("DOMContentLoaded", function() {
     const val = content.value;
     if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
     currentNote = newName; shownNote = newName;
-    safeSet("SimpleJot-current", newName);
+    safeSet("TextCove-current", newName);
     title.value = newName;
     markSaving();
     const p = oldName ? idbGet(oldName).then(function(oldVal) {
@@ -1033,21 +1192,21 @@ document.addEventListener("DOMContentLoaded", function() {
         showAlert("Storage is full, so the note could not be renamed.");
         currentNote = oldName; shownNote = oldName || "";
         title.value = oldName || "";
-        safeSet("SimpleJot-current", oldName || "");
+        safeSet("TextCove-current", oldName || "");
       }
     });
   }
 
-  var MAX_LINE_PADDING_EM = 12;
-  var MAX_FILE_SIZE = 5 * 1024 * 1024;
-  var MAX_TEXT_LEN = 1000000;
-  var MAX_IMPORT_NOTES = 200;
+  var maxLinePaddingEm = 12;
+  var maxFileSize = 5 * 1024 * 1024;
+  var maxTextLen = 1000000;
+  var maxImportNotes = 200;
   var lastTrash = null;
 
   function clampLineWidth(v) {
     const n = parseFloat(v);
     if (isNaN(n)) return 10;
-    return Math.min(MAX_LINE_PADDING_EM, Math.max(1, n));
+    return Math.min(maxLinePaddingEm, Math.max(1, n));
   }
 
   function sanitizeFileName(name) {
@@ -1094,20 +1253,20 @@ document.addEventListener("DOMContentLoaded", function() {
       preview.style.paddingLeft = lwValue + "em";
       preview.style.paddingRight = lwValue + "em";
     }
-    safeSet("SimpleJot-settings", settingValues);
-    safeSet("SimpleJot-settings-fs", fsValue);
-    safeSet("SimpleJot-settings-lh", lhValue);
-    safeSet("SimpleJot-settings-lw", lwValue);
+    safeSet("TextCove-settings", settingValues);
+    safeSet("TextCove-settings-fs", fsValue);
+    safeSet("TextCove-settings-lh", lhValue);
+    safeSet("TextCove-settings-lw", lwValue);
   }
 
   function applyStoredSettings() {
-    const fsv = safeGet("SimpleJot-settings-fs");
+    const fsv = safeGet("TextCove-settings-fs");
     if (fsv) fs.value = fsv;
-    const lhv = safeGet("SimpleJot-settings-lh");
+    const lhv = safeGet("TextCove-settings-lh");
     if (lhv) lh.value = lhv;
-    const lwv = safeGet("SimpleJot-settings-lw");
+    const lwv = safeGet("TextCove-settings-lw");
     if (lwv) lw.value = lwv;
-    const stored = safeGet("SimpleJot-settings");
+    const stored = safeGet("TextCove-settings");
     if (stored) {
       content.style.fontSize = fs.value + "em";
       content.style.lineHeight = String(lh.value);
@@ -1120,10 +1279,38 @@ document.addEventListener("DOMContentLoaded", function() {
     }
   }
 
+  function defaultTextSettings() {
+    return {
+      fs: fs.defaultValue || "1",
+      lh: lh.defaultValue || "1.9",
+      lw: lw.defaultValue || "10"
+    };
+  }
+
+  function isTextSettingsDefault() {
+    const d = defaultTextSettings();
+    return String(fs.value) === String(d.fs) &&
+      String(lh.value) === String(d.lh) &&
+      String(clampLineWidth(lw.value)) === String(clampLineWidth(d.lw));
+  }
+
+  function resetTextSettings() {
+    if (isTextSettingsDefault()) {
+      showAlert("Settings are already at their defaults, so there is nothing to reset.");
+      return;
+    }
+    const d = defaultTextSettings();
+    fs.value = d.fs;
+    lh.value = d.lh;
+    lw.value = d.lw;
+    textSettings();
+    showAlert("Text settings have been reset to defaults.");
+  }
+
   const rootEl = document.documentElement;
 
   function currentThemeMode() {
-    return safeGet("SimpleJot-theme") === "night" ? "night" : "light";
+    return safeGet("TextCove-theme") === "night" ? "night" : "light";
   }
 
   function applyTheme() {
@@ -1132,6 +1319,11 @@ document.addEventListener("DOMContentLoaded", function() {
     if (theme) {
       theme.title = night ? "Switch to light theme" : "Switch to dark theme";
       theme.setAttribute("aria-label", night ? "Switch to light theme" : "Switch to dark theme");
+    }
+    if (themeIcon) {
+      const ref = night ? "#icon-sun" : "#icon-moon";
+      themeIcon.setAttribute("href", ref);
+      themeIcon.setAttribute("xlink:href", ref);
     }
   }
 
@@ -1145,6 +1337,13 @@ document.addEventListener("DOMContentLoaded", function() {
 
     content.addEventListener("input", function() {
       updateCounters();
+      if (content.value.length > loadSafeLimit && oversizeWarnedName !== currentNote) {
+        oversizeWarnedName = currentNote;
+        setStatus("error", "Note too large, export soon");
+        showAlert("This note is over " + formatSize(loadSafeLimit) + ". Typing may freeze the page. Download a backup copy, then split it into smaller notes.");
+      } else if (content.value.length <= loadSafeLimit) {
+        oversizeWarnedName = "";
+      }
       if (previewOpen) refreshPreview();
       if (!currentNote) {
         if (content.value === "") return;
@@ -1228,16 +1427,16 @@ document.addEventListener("DOMContentLoaded", function() {
       searchInput.addEventListener("input", renderNoteList);
     }
     if (sortSelect) {
-      const storedSort = safeGet("SimpleJot-sort");
+      const storedSort = safeGet("TextCove-sort");
       if (storedSort === "name" || storedSort === "updated") sortSelect.value = storedSort;
       sortSelect.addEventListener("change", function() {
-        safeSet("SimpleJot-sort", sortSelect.value);
+        safeSet("TextCove-sort", sortSelect.value);
         renderNoteList();
       });
     }
 
     function bootFromIDB() {
-      const migrated = safeGet("SimpleJot-migrated-idb-v1");
+      const migrated = safeGet("TextCove-migrated-idb-v1");
       const startP = migrated ? Promise.resolve() : migrateFromLocalStorage();
       return startP.then(refreshNames).then(function() {
         const unnamed = getNoteNames().filter(function(n) { return n.trim() === ""; });
@@ -1247,7 +1446,7 @@ document.addEventListener("DOMContentLoaded", function() {
             const fixedName = generateNoteName(defaultNoteBase);
             return idbGet(bad).then(function(v) {
               return idbPut(fixedName, v || "").then(function() { return idbDel(bad); }).then(function() {
-                if (safeGet("SimpleJot-current") === bad) safeSet("SimpleJot-current", fixedName);
+                if (safeGet("TextCove-current") === bad) safeSet("TextCove-current", fixedName);
                 clearRecovery(bad);
               });
             });
@@ -1259,10 +1458,10 @@ document.addEventListener("DOMContentLoaded", function() {
           return rescueMirrors().then(function(n) {
             if (n > 0) { setTimeout(function() { showAlert("Recovered " + n + " note(s) from local backup after browser cleared data. Export to keep them."); }, 0); return; }
             const recs = recoveryAll(), rk = Object.keys(recs);
-            if (rk.length) { let c = Promise.resolve(); rk.slice(0, 10).forEach(function(k) { c = c.then(function() { return idbPut(sanitizeFileName(k) || generateNoteName(defaultNoteBase), String(recs[k] || "").slice(0, MAX_TEXT_LEN)).catch(function() {}); }); }); return c.then(refreshNames).then(function() { if (getNoteNames().length) setTimeout(function() { showAlert("Recovered unsaved text. Export to keep it."); }, 0); }); }
-            if (safeGet("SimpleJot-current")) setTimeout(function() { showAlert("Browser cleared saved notes. Starting fresh \u2014 export often to keep notes."); }, 0);
+            if (rk.length) { let c = Promise.resolve(); rk.slice(0, 10).forEach(function(k) { c = c.then(function() { return idbPut(sanitizeFileName(k) || generateNoteName(defaultNoteBase), String(recs[k] || "").slice(0, maxTextLen)).catch(function() {}); }); }); return c.then(refreshNames).then(function() { if (getNoteNames().length) setTimeout(function() { showAlert("Recovered unsaved text. Export to keep it."); }, 0); }); }
+            if (safeGet("TextCove-current")) setTimeout(function() { showAlert("Browser cleared saved notes. Starting fresh \u2014 export often to keep notes."); }, 0);
             const f = generateNoteName(defaultNoteBase);
-            return idbPut(f, "").then(function() { safeSet("SimpleJot-current", f); }).then(refreshNames);
+            return idbPut(f, "").then(function() { safeSet("TextCove-current", f); }).then(refreshNames);
           });
         }
       }).then(function() {
@@ -1271,7 +1470,7 @@ document.addEventListener("DOMContentLoaded", function() {
           const params = new URLSearchParams(window.location.search);
           wanted = params.get("share") || params.get("note");
         } catch (err) {}
-        const savedNote = safeGet("SimpleJot-current");
+        const savedNote = safeGet("TextCove-current");
         if (wanted && getNoteNames().indexOf(wanted) !== -1) {
           return openNote(wanted);
         } else if (savedNote !== null && getNoteNames().indexOf(savedNote) !== -1) {
@@ -1304,7 +1503,7 @@ document.addEventListener("DOMContentLoaded", function() {
       });
     }
 
-    bootFromIDB();
+    migrateIdbFromLegacy().then(bootFromIDB);
   } else {
     showAlert("Sorry, either your browser does not support local storage, or you have exceeded storage limits.");
   }
@@ -1325,7 +1524,7 @@ document.addEventListener("DOMContentLoaded", function() {
       if (!currentNote) {
         const finalName = getNoteNames().indexOf(existingName) !== -1 ? generateNoteName(existingName) : existingName;
         currentNote = finalName; shownNote = finalName;
-        safeSet("SimpleJot-current", finalName);
+        safeSet("TextCove-current", finalName);
         title.value = finalName;
         idbPut(finalName, content.value).then(function() {
           clearRecovery(finalName);
@@ -1349,7 +1548,7 @@ document.addEventListener("DOMContentLoaded", function() {
       const oldName = currentNote;
       const val = content.value;
       currentNote = finalName; shownNote = finalName;
-      safeSet("SimpleJot-current", finalName);
+      safeSet("TextCove-current", finalName);
       title.value = finalName;
       idbPut(finalName, val).then(function() {
         clearRecovery(finalName);
@@ -1383,7 +1582,7 @@ document.addEventListener("DOMContentLoaded", function() {
           pushTrash({ name: doomed, value: doomedVal, pin: wasPinned, updated: wasUpdated });
           clearRecovery(doomed);
         }
-        safeRemove("SimpleJot-current");
+        safeRemove("TextCove-current");
         currentNote = ""; shownNote = ""; dirty = false;
         title.value = "";
         content.value = "";
@@ -1436,9 +1635,15 @@ document.addEventListener("DOMContentLoaded", function() {
   });
 
   theme.addEventListener("click", function() {
-    safeSet("SimpleJot-theme", currentThemeMode() === "night" ? "light" : "night");
+    safeSet("TextCove-theme", currentThemeMode() === "night" ? "light" : "night");
     applyTheme();
   });
+
+  if (resetBtn) {
+    resetBtn.addEventListener("click", function() {
+      resetTextSettings();
+    });
+  }
 
   saveStatus.addEventListener("click", function() {
     if (saveStatus.textContent.indexOf("undo") !== -1 && (lastTrash || getTrash().length)) undoLastDelete();
@@ -1472,7 +1677,7 @@ document.addEventListener("DOMContentLoaded", function() {
   });
 
   start.addEventListener("click", function() {
-    safeSet("SimpleJot-seen", "1");
+    safeSet("TextCove-seen", "1");
     home.classList.remove("active");
     content.focus();
   });
@@ -1533,9 +1738,17 @@ document.addEventListener("DOMContentLoaded", function() {
   });
 
   try {
-    if (!safeGet("SimpleJot-seen")) home.classList.add("active");
+    if (!safeGet("TextCove-seen")) home.classList.add("active");
     else home.classList.remove("active");
   } catch (err) {}
+
+  try {
+    if (renameBanner && !safeGet("TextCove-rename-seen")) renameBanner.hidden = false;
+  } catch (err) {}
+  if (renameClose) renameClose.addEventListener("click", function() {
+    safeSet("TextCove-rename-seen", "1");
+    if (renameBanner) renameBanner.hidden = true;
+  });
   applyTheme();
 
   updateCounters();
