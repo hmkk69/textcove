@@ -9,7 +9,7 @@
 
 A fast, private, offline-ready notepad. No accounts, no tracking, no WYSIWYG clutter. Your notes live in your browser (IndexedDB + localStorage recovery) until you decide to delete or download them.
 
-**Website:** https://tc.2nul.dpdns.org/ or https://textcove.pages.dev
+**Website:** https://tc.2nul.dpdns.org/
 
 ![TextCove screenshot](assets/screenshot-2026-10-03.png)
 
