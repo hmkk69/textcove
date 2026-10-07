@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://jot.2nul.dpdns.org/sitemap.xml
+Sitemap: https://tc.hmkkk.qzz.io/sitemap.xml

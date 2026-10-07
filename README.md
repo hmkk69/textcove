@@ -1,15 +1,17 @@
 # TextCove
 
+> Ownership: Originally created by 2nul, who no longer wishes to continue development. Ownership has been transferred to hmkk69.
+
 ### Formely known as [SimpleJot](https://github.com/2nul/simplejot)
 
-[![PWA](https://img.shields.io/badge/PWA-ready-brightgreen)](https://jot.2nul.dpdns.org/)
+[![PWA](https://img.shields.io/badge/PWA-ready-brightgreen)](https://tc.hmkkk.qzz.io/)
 [![No dependencies](https://img.shields.io/badge/dependencies-zero-blue)](package.json)
 [![Tests](https://img.shields.io/badge/tests-passing-brightgreen)](tests/)
 [![License](https://img.shields.io/badge/license-non--commercial-lightgrey)](LICENSE)
 
 A fast, private, offline-ready notepad. No accounts, no tracking, no WYSIWYG clutter. Your notes live in your browser (IndexedDB + localStorage recovery) until you decide to delete or download them.
 
-**Website:** https://tc.2nul.dpdns.org/
+**Website:** https://tc.hmkkk.qzz.io/
 
 ![TextCove screenshot](assets/screenshot-2026-10-03.png)
 
@@ -80,4 +82,4 @@ The previously vendored FileSaver.js, Smoke.js and Countable.js helpers were rep
 
 ## License
 
-[TextCove Non-Commercial Attribution License](https://github.com/2nul/TextCove/blob/main/LICENSE)
+[TextCove Non-Commercial Attribution License](https://github.com/hmkk69/textcove/blob/main/LICENSE)
