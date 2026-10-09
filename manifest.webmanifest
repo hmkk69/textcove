@@ -12,6 +12,32 @@
   "lang": "en",
   "background_color": "#ffffff",
   "theme_color": "#ffffff",
+  "launch_handler": {
+    "client_mode": "focus-existing"
+  },
+  "file_handlers": [
+    {
+      "action": "./",
+      "accept": {
+        "text/plain": [".txt"]
+      }
+    }
+  ],
+  "share_target": {
+    "action": "./",
+    "method": "GET",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  },
+  "protocol_handlers": [
+    {
+      "protocol": "web+textcove",
+      "url": "./?protocol=%s"
+    }
+  ],
   "categories": ["productivity", "utilities"],
   "icons": [
     {

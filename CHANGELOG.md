@@ -1,0 +1,51 @@
+# Changelog
+
+All notable changes to TextCove are documented here, newest first.
+Dates follow the project commit history.
+
+## 2026-10-09
+
+- Desktop PWA install: open `.txt` files straight into the app (`file_handlers`), receive shared text/links (`share_target`), handle `web+textcove` links (`protocol_handlers`) and reuse the open window (`launch_handler`).
+- Subtle "App available" notice in the footer instead of a button. It triggers the native install prompt when the browser offers one, otherwise it explains how to install manually. The notice hides itself once the app runs installed.
+- Shared text and launched files open as new notes.
+
+## 2026-10-07
+
+- Ownership transferred from 2nul to hmkk69; repo links and site domain updated (`tc.hmkkk.qzz.io`).
+
+## 2026-10-04
+
+- **Breaking:** renamed SimpleJot to TextCove across UI, manifest, PWA cache, docs and links.
+- Existing notes carry over: IndexedDB and localStorage keys migrate from `SimpleJot-*` to `TextCove-*`.
+- Dismissible rename banner plus a `renamed.html` landing page.
+- Oversized-note guard: backup-before-clear flow so a huge note can no longer freeze the page.
+
+## 2026-10-03
+
+- Storage: race-safe note switching, persistent trash with 30-day expiry and click-to-undo, one-tap backup with free-space status.
+- UX: shared ease-out motion curve, deep-slate dark mode with light default, footer keeps only the offline tip.
+- Notes list loads in a single IndexedDB pass and searches titles plus content; file names sanitized, import size/count capped.
+- Hardened service worker caching and manifest `start_url`.
+
+## 2026-09-20
+
+- Fixed service worker auto-update: online clients check for a newer worker on load and reconnect, then swap to it.
+
+## 2026-09-19
+
+- Rewrote the note engine: dropped FileSaver/Smoke/Countable for native download, native `<dialog>` and a hand-written counter.
+- Added search, sort, pins, markdown preview, keyboard shortcuts and JSON import/export.
+- localStorage fallback when IndexedDB is blocked; installable offline-first PWA with build-stamped service worker cache.
+- License changed to non-commercial attribution (see `LICENSE`).
+
+## 2026-09-16
+
+- Migrated notes from localStorage to IndexedDB with realtime autosave.
+- Offline use via service worker cache.
+- New notes default to "New note" so empty titles can no longer lose data.
+
+## 2026-09-12
+
+- Multi-note management: notes panel, per-note autosave, rename via title field, per-note delete, last-open note restored; legacy single-note data auto-migrated.
+- Note naming warning on startup.
+- Initial commit.

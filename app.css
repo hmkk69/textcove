@@ -651,6 +651,27 @@ footer {
   fill: #61cce0;
 }
 
+.install-tip {
+  position: absolute;
+  bottom: .65em;
+  left: 3.2em;
+  font-size: 70%;
+  color: #767676;
+  background: none;
+  border: 0;
+  padding: 0;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.night .install-tip {
+  color: #9aa3b2;
+}
+
+.install-tip[hidden] {
+  display: none;
+}
+
 .counter {
   position: absolute;
   bottom: 0;

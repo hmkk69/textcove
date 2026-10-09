@@ -57,6 +57,86 @@ document.addEventListener("DOMContentLoaded", function() {
   const dialogCancel = document.getElementById("dialogCancel");
   const renameBanner = document.getElementById("renameBanner");
   const renameClose = document.getElementById("renameClose");
+  const installTip = document.getElementById("installTip");
+
+  let deferredInstall = null;
+
+  function isInstalledMode() {
+    try {
+      if (window.matchMedia && (window.matchMedia("(display-mode: standalone)").matches || window.matchMedia("(display-mode: window-controls-overlay)").matches)) return true;
+    } catch (err) {}
+    try {
+      if (window.navigator.standalone === true) return true;
+    } catch (err) {}
+    return false;
+  }
+
+  function syncInstallUI() {
+    if (!installTip) return;
+    installTip.hidden = isInstalledMode();
+  }
+
+  function installInstructions() {
+    try {
+      if (/iphone|ipad|ipod/i.test(window.navigator.userAgent || "")) return "To install on iPhone or iPad: tap Share, then Add to Home Screen.";
+    } catch (err) {}
+    return "To install: open the browser menu, then choose Install TextCove or Save and share > Install. On iPhone use Share > Add to Home Screen.";
+  }
+
+  function requestInstall() {
+    if (deferredInstall) {
+      try {
+        deferredInstall.prompt();
+        if (deferredInstall.userChoice) {
+          deferredInstall.userChoice.then(function() {
+            deferredInstall = null;
+            syncInstallUI();
+          }).catch(function() {
+            deferredInstall = null;
+          });
+        } else {
+          deferredInstall = null;
+        }
+      } catch (err) {
+        deferredInstall = null;
+      }
+      return;
+    }
+    showAlert(installInstructions());
+  }
+
+  window.addEventListener("beforeinstallprompt", function(e) {
+    e.preventDefault();
+    deferredInstall = e;
+    syncInstallUI();
+  });
+
+  window.addEventListener("appinstalled", function() {
+    deferredInstall = null;
+    syncInstallUI();
+  });
+
+  if (installTip) installTip.addEventListener("click", requestInstall);
+
+  syncInstallUI();
+
+  if ("launchQueue" in window && window.launchQueue && typeof window.launchQueue.setConsumer === "function") {
+    try {
+      window.launchQueue.setConsumer(function(params) {
+        if (!params || !params.files || !params.files.length) return;
+        params.files.forEach(function(handle) {
+          const done = function(file) {
+            if (file) handleDroppedFile(file);
+          };
+          if (handle && typeof handle.getFile === "function") {
+            handle.getFile().then(done).catch(function() {});
+          } else {
+            done(handle);
+          }
+        });
+      });
+    } catch (err) {}
+  }
 
   let dialogResolve = null;
 
@@ -1466,10 +1546,42 @@ document.addEventListener("DOMContentLoaded", function() {
         }
       }).then(function() {
         let wanted = null;
+        let sharedBody = "";
+        let sharedTitle = "";
         try {
           const params = new URLSearchParams(window.location.search);
           wanted = params.get("share") || params.get("note");
+          sharedTitle = params.get("title") || "";
+          const sharedText = params.get("text") || "";
+          const sharedUrl = params.get("url") || "";
+          const proto = params.get("protocol") || "";
+          const parts = [];
+          if (sharedTitle) parts.push(sharedTitle);
+          if (sharedText) parts.push(sharedText);
+          if (sharedUrl && sharedUrl !== sharedText) parts.push(sharedUrl);
+          if (!parts.length && proto) parts.push(proto);
+          sharedBody = parts.join("\n\n");
         } catch (err) {}
+        if (sharedBody) {
+          const rawBase = String(sharedTitle || sharedBody).split("\n")[0].trim().slice(0, 40) || defaultNoteBase;
+          const base = sanitizeFileName(rawBase);
+          const target = getNoteNames().indexOf(base) !== -1 ? generateNoteName(base) : base;
+          stashPrev();
+          currentNote = target; shownNote = target; dirty = false;
+          safeSet("TextCove-current", target);
+          title.value = target;
+          content.value = sharedBody.slice(0, maxTextLen);
+          updateCounters();
+          try {
+            window.history.replaceState({}, "", window.location.pathname);
+          } catch (err) {}
+          return idbPut(target, content.value).then(function() {
+            markSaved();
+            renderNoteList();
+          }).catch(function(err) {
+            if (isQuotaError(err)) markError("Save failed: storage is full");
+          });
+        }
         const savedNote = safeGet("TextCove-current");
         if (wanted && getNoteNames().indexOf(wanted) !== -1) {
           return openNote(wanted);

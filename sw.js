@@ -1,5 +1,5 @@
 "use strict";
-const cacheName = "textcove-220576ae";
+const cacheName = "textcove-9ad899c1";
 const assets = [
   "./",
   "./index.html",

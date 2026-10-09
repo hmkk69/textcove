@@ -60,6 +60,7 @@ textcove/
 ├── serve-local.mjs     # Dev server with live reload (older variant)
 ├── robots.txt
 ├── sitemap.xml
+├── CHANGELOG.md        # release history, newest first
 ├── package.json        # build / test / check scripts
 ├── scripts/build.mjs   # Stamps a content hash into sw.js
 ├── scripts/serve-local.mjs # Dev server used by npm run dev
