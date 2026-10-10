@@ -231,6 +231,20 @@ footer button:active svg,
   transform: scale(1.08);
 }
 
+.undo-btn:hover svg {
+  fill: #61cce0;
+  transform: scale(1.08);
+}
+
+.undo-btn:disabled {
+  opacity: .35;
+  cursor: default;
+}
+
+.undo-btn:disabled svg {
+  fill: #767676;
+}
+
 .btn-group button,
 footer button,
 section button {
@@ -644,27 +658,6 @@ footer {
   fill: #61cce0;
 }
 
-.install-tip {
-  position: absolute;
-  bottom: .65em;
-  left: 3.2em;
-  font-size: 70%;
-  color: #767676;
-  background: none;
-  border: 0;
-  padding: 0;
-  white-space: nowrap;
-  cursor: pointer;
-}
-
-.night .install-tip {
-  color: #9aa3b2;
-}
-
-.install-tip[hidden] {
-  display: none;
-}
-
 .counter {
   position: absolute;
   bottom: 0;
@@ -1050,22 +1043,18 @@ html.night #theme:hover svg {
 .save-status {
   position: absolute;
   bottom: .85em;
-  left: 4.25em;
+  left: 3.5em;
   font-size: 75%;
   color: #767676;
   white-space: nowrap;
-  background: rgba(0, 0, 0, .05);
-  border-radius: 999px;
-  padding: .2em .8em;
-  transition: color .2s ease, background .2s ease;
+  background: none;
+  border: 0;
+  padding: 0;
 }
 
+.save-status[data-state="saving"],
 .save-status[data-state="saved"] {
   color: #4d7c0f;
-}
-
-.save-status[data-state="saving"] {
-  color: #767676;
 }
 
 .save-status[data-state="error"] {
@@ -1073,10 +1062,11 @@ html.night #theme:hover svg {
 }
 
 .night .save-status {
-  color: #c3c9d4;
-  background: rgba(255, 255, 255, .1);
+  color: #9aa3b2;
+  background: none;
 }
 
+.night .save-status[data-state="saving"],
 .night .save-status[data-state="saved"] {
   color: #b8e62e;
 }
@@ -1087,7 +1077,7 @@ html.night #theme:hover svg {
 
 @media (max-width: 48em) {
   .save-status {
-    left: 3.75em;
+    left: 3.25em;
     max-width: 10em;
     overflow: hidden;
     text-overflow: ellipsis;
