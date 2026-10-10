@@ -92,8 +92,12 @@
   }
   function updateNetStatus() {
     var el = document.getElementById("netStatus");
-    if (!el) return;
-    el.classList.toggle("is-offline", !navigator.onLine);
+    var offline = navigator.onLine === false;
+    if (el) {
+      el.classList.toggle("is-offline", offline);
+      el.hidden = offline;
+    }
+    try { document.body.classList.toggle("is-offline", offline); } catch (err) {}
   }
   window.addEventListener("online", updateNetStatus);
   window.addEventListener("offline", updateNetStatus);

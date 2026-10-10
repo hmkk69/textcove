@@ -702,6 +702,12 @@ footer {
 .night .net-status {
   color: #9aa3b2;
 }
+body.is-offline .net-status {
+  display: none;
+}
+body.is-offline .store-status {
+  bottom: .55em;
+}
 .store-status { position: absolute; bottom: .1em; left: 50%; transform: translateX(-50%); font-size: 70%; color: #767676; white-space: nowrap; background: none; border: 0; padding: 0; cursor: pointer; }
 .night .store-status { color: #9aa3b2; }
 .store-status[data-low="1"] { color: #b00020; }
