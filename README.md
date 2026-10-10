@@ -40,7 +40,7 @@ A fast, private, offline-ready notepad. No accounts, no tracking, no WYSIWYG clu
 
 ## Technology stack
 
-- HTML5, CSS3, vanilla JavaScript — zero runtime dependencies
+- HTML5, CSS3, vanilla JavaScript - zero runtime dependencies
 - IndexedDB for notes, localStorage for settings and crash recovery
 - Native `<dialog>`, native `a[download]` + Blob URLs, hand-written word counter
 - IBM Plex Mono for readability
