@@ -56,8 +56,6 @@ document.addEventListener("DOMContentLoaded", function() {
   const dialogInput = document.getElementById("dialogInput");
   const dialogOk = document.getElementById("dialogOk");
   const dialogCancel = document.getElementById("dialogCancel");
-  const renameBanner = document.getElementById("renameBanner");
-  const renameClose = document.getElementById("renameClose");
   const installTip = document.getElementById("installTip");
 
   let deferredInstall = null;
@@ -1975,13 +1973,6 @@ document.addEventListener("DOMContentLoaded", function() {
     else home.classList.remove("active");
   } catch (err) {}
 
-  try {
-    if (renameBanner && !safeGet("TextCove-rename-seen")) renameBanner.hidden = false;
-  } catch (err) {}
-  if (renameClose) renameClose.addEventListener("click", function() {
-    safeSet("TextCove-rename-seen", "1");
-    if (renameBanner) renameBanner.hidden = true;
-  });
   applyTheme();
 
   updateCounters();
