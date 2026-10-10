@@ -48,6 +48,7 @@ document.addEventListener("DOMContentLoaded", function() {
   const previewBtn = document.getElementById("previewToggle");
   const preview = document.getElementById("preview");
   const previewBody = document.getElementById("previewBody");
+  const printTitle = document.getElementById("printTitle");
   const copyBtn = document.getElementById("copyNote");
   const resetBtn = document.getElementById("resetSettings");
   const dialog = document.getElementById("appDialog");
@@ -139,17 +140,27 @@ document.addEventListener("DOMContentLoaded", function() {
   }
 
   let dialogResolve = null;
+  let lastFocus = null;
+
+  function restoreFocus() {
+    try {
+      if (lastFocus && typeof lastFocus.focus === "function") lastFocus.focus();
+    } catch (err) {}
+    lastFocus = null;
+  }
 
   function finishDialog(value) {
     if (dialog.open) dialog.close();
     const resolve = dialogResolve;
     dialogResolve = null;
+    restoreFocus();
     if (resolve) resolve(value);
   }
 
   function openDialog(mode, message, options) {
     const opts = options || {};
     return new Promise(function(resolve) {
+      try { lastFocus = document.activeElement; } catch (err) { lastFocus = null; }
       dialogResolve = resolve;
       dialogMessage.textContent = message;
       dialogOk.textContent = opts.ok || "OK";
@@ -206,6 +217,7 @@ document.addEventListener("DOMContentLoaded", function() {
     const mode = dialog.getAttribute("data-mode");
     const pending = dialogResolve;
     dialogResolve = null;
+    restoreFocus();
     if (!pending) return;
     if (mode === "prompt") pending(null);
     else if (mode === "confirm") pending(false);
@@ -216,6 +228,23 @@ document.addEventListener("DOMContentLoaded", function() {
     if (e.key === "Enter") {
       e.preventDefault();
       dialogOk.click();
+    }
+  });
+
+  dialog.addEventListener("keydown", function(e) {
+    if (e.key !== "Tab") return;
+    const items = [dialogInput, dialogOk, dialogCancel].filter(function(el) {
+      return el && el.style.display !== "none" && !el.disabled;
+    });
+    if (!items.length) return;
+    const first = items[0];
+    const last = items[items.length - 1];
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault();
+      first.focus();
     }
   });
 
@@ -326,6 +355,7 @@ document.addEventListener("DOMContentLoaded", function() {
   let saveTimer = null;
   let lastRecoveryWrite = 0;
   let listToken = 0;
+  let listCache = { at: 0, data: null };
   let previewOpen = false;
   const legacyPrefix = "SimpleJot-";
   const legacyNotesPrefix = "SimpleJot-note:";
@@ -678,6 +708,25 @@ document.addEventListener("DOMContentLoaded", function() {
     safeRemove(recoveryPrefix + (name || currentNote));
   }
 
+  function reconcileRecovery() {
+    const recs = recoveryAll();
+    const keys = Object.keys(recs).slice(0, 50);
+    let chain = Promise.resolve();
+    keys.forEach(function(k) {
+      const saved = String(recs[k] || "");
+      if (!saved) return;
+      chain = chain.then(function() {
+        return idbGet(k).then(function(cur) {
+          const current = String(cur === null || cur === undefined ? "" : cur);
+          if (current !== saved) {
+            return idbPut(k, saved.slice(0, maxTextLen)).catch(function() {});
+          }
+        }).catch(function() {});
+      });
+    });
+    return chain;
+  }
+
   function flushSave() {
     if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
     if (!currentNote) return Promise.resolve();
@@ -715,9 +764,15 @@ document.addEventListener("DOMContentLoaded", function() {
     return candidate;
   }
 
+  function reserveName(baseName) {
+    const name = generateNoteName(baseName);
+    namesCache.push(name);
+    return name;
+  }
+
   function ensureCurrentNote() {
     if (currentNote) return Promise.resolve(currentNote);
-    const autoName = generateNoteName(defaultNoteBase);
+    const autoName = reserveName(defaultNoteBase);
     currentNote = autoName; shownNote = autoName; dirty = false;
     safeSet("TextCove-current", autoName);
     title.value = autoName;
@@ -726,6 +781,8 @@ document.addEventListener("DOMContentLoaded", function() {
       renderNoteList();
       return autoName;
     }).catch(function(err) {
+      const ri = namesCache.indexOf(autoName);
+      if (ri !== -1) namesCache.splice(ri, 1);
       if (isQuotaError(err)) markError("Save failed: storage is full");
       return autoName;
     });
@@ -852,7 +909,8 @@ document.addEventListener("DOMContentLoaded", function() {
           if (n.toLowerCase().indexOf(q) !== -1) return true;
           const body = (n === currentNote) ? content.value : (all[n] || "");
           if (String(body).length > loadSafeLimit) return false;
-          return String(body).toLowerCase().indexOf(q) !== -1;
+          const hay = String(body).length > 50000 ? String(body).slice(0, 50000) : String(body);
+          return hay.toLowerCase().indexOf(q) !== -1;
         });
       }
       if (!names.length) {
@@ -919,7 +977,12 @@ document.addEventListener("DOMContentLoaded", function() {
         noteList.appendChild(li);
       });
     };
-    idbGetAll().then(paint).catch(function() {
+    const useCache = listCache.data && (Date.now() - listCache.at < 2000);
+    const fetchAll = useCache ? Promise.resolve(listCache.data) : idbGetAll().then(function(all) {
+      listCache = { at: Date.now(), data: all };
+      return all;
+    });
+    fetchAll.then(paint).catch(function() {
       const fallback = {};
       if (currentNote) fallback[currentNote] = content.value;
       paint(fallback);
@@ -953,7 +1016,7 @@ document.addEventListener("DOMContentLoaded", function() {
     });
   }
   function renderTrash() { try { if (!trashList) return; const t = getTrash(); if (trashCount) trashCount.textContent = String(t.length); trashList.innerHTML = ""; t.forEach(function(x, i) { const li = document.createElement("li"); li.className = "trash-row"; const b = document.createElement("span"); b.className = "note-name"; b.textContent = x.name; const r = document.createElement("button"); r.className = "trash-restore"; r.textContent = "Restore"; r.setAttribute("aria-label", "Restore " + x.name); r.addEventListener("click", function() { restoreTrash(i); }); const d = document.createElement("button"); d.className = "note-delete"; d.textContent = "\u00d7"; d.setAttribute("aria-label", "Delete forever " + x.name); d.addEventListener("click", function() { wipeTrash(i); }); li.appendChild(b); li.appendChild(r); li.appendChild(d); trashList.appendChild(li); }); if (trashEmpty) trashEmpty.style.display = t.length ? "" : "none"; } catch (err) {} }
-  function restoreTrash(i) { const t = getTrash(), x = t[i]; if (!x) return Promise.resolve(false); const target = getNoteNames().indexOf(x.name) !== -1 ? generateNoteName(x.name) : x.name; return idbPut(target, x.value).then(function() { if (x.pin && pins.indexOf(target) === -1) { pins.push(target); savePins(); } if (x.updated) { meta[target] = x.updated; saveMeta(); } t.splice(i, 1); setTrash(t); if (lastTrash && lastTrash.name === x.name && lastTrash.value === x.value) lastTrash = null; if (!currentNote) return openNote(target); renderNoteList(); setStatus("saved", "Restored \u201c" + target + "\u201d"); return true; }).catch(function() { showAlert("Restore failed. Storage may be full."); return false; }); }
+  function restoreTrash(i) { const t = getTrash(), x = t[i]; if (!x) return Promise.resolve(false); const target = getNoteNames().indexOf(x.name) !== -1 ? reserveName(x.name) : x.name; if (namesCache.indexOf(target) === -1) namesCache.push(target); return idbPut(target, x.value).then(function() { if (x.pin && pins.indexOf(target) === -1) { pins.push(target); savePins(); } if (x.updated) { meta[target] = x.updated; saveMeta(); } t.splice(i, 1); setTrash(t); if (lastTrash && lastTrash.name === x.name && lastTrash.value === x.value) lastTrash = null; if (!currentNote) return openNote(target); renderNoteList(); setStatus("saved", "Restored \u201c" + target + "\u201d"); return true; }).catch(function() { showAlert("Restore failed. Storage may be full."); return false; }); }
   function wipeTrash(i) { const t = getTrash(), x = t[i]; showConfirm("Delete \u201c" + (x ? x.name : "") + "\u201d forever?", { ok: "YES", cancel: "NO" }).then(function(yes) { if (!yes) return; const n = getTrash(); n.splice(i, 1); setTrash(n); if (lastTrash && x && lastTrash.name === x.name && lastTrash.value === x.value) lastTrash = null; }); }
 
   function migrateFromLocalStorage() {
@@ -991,11 +1054,18 @@ document.addEventListener("DOMContentLoaded", function() {
   }
 
   function inlineMd(s) {
-    let out = s.replace(/`([^`]+)`/g, "<code>$1</code>");
+    const codes = [];
+    let out = String(s).replace(/`([^`]+)`/g, function(m, p1) {
+      codes.push(p1);
+      return "@@tc" + (codes.length - 1) + "@@";
+    });
     out = out.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
     out = out.replace(/(^|\W)\*([^*\n]+)\*/g, "$1<em>$2</em>");
     out = out.replace(/(^|\W)_([^_\n]+)_/g, "$1<em>$2</em>");
     out = out.replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, "<a href=\"$2\" target=\"_blank\" rel=\"noopener\">$1</a>");
+    out = out.replace(/@@tc(\d+)@@/g, function(m, i) {
+      return "<code>" + (codes[+i] ? codes[+i] : "") + "</code>";
+    });
     return out;
   }
 
@@ -1115,9 +1185,10 @@ document.addEventListener("DOMContentLoaded", function() {
         const cleanKey = sanitizeFileName(key);
         let noteName;
         if (key && key.trim() !== "") {
-          noteName = getNoteNames().indexOf(cleanKey) !== -1 ? generateNoteName(cleanKey) : cleanKey;
+          noteName = getNoteNames().indexOf(cleanKey) !== -1 ? reserveName(cleanKey) : cleanKey;
+          if (namesCache.indexOf(noteName) === -1) namesCache.push(noteName);
         } else {
-          noteName = generateNoteName(defaultNoteBase);
+          noteName = reserveName(defaultNoteBase);
         }
         return idbPut(noteName, value).then(function() { importedCount++; });
       });
@@ -1181,7 +1252,8 @@ document.addEventListener("DOMContentLoaded", function() {
       }
       const rawBase = name.replace(/\.[a-z0-9]+$/i, "") || defaultNoteBase;
       const base = sanitizeFileName(rawBase);
-      const noteName = getNoteNames().indexOf(base) !== -1 ? generateNoteName(base) : base;
+      const noteName = getNoteNames().indexOf(base) !== -1 ? reserveName(base) : base;
+      if (namesCache.indexOf(noteName) === -1) namesCache.push(noteName);
       stashPrev();
       currentNote = noteName; shownNote = noteName; dirty = false;
       safeSet("TextCove-current", noteName);
@@ -1203,6 +1275,17 @@ document.addEventListener("DOMContentLoaded", function() {
     flushSave().then(function() {
       return idbGetAll();
     }).then(function(notes) {
+      let total = 0;
+      Object.keys(notes).forEach(function(k) { total += String(notes[k] || "").length; });
+      if (total > 10000000) {
+        return showConfirm("Backup is large (" + formatSize(total) + "). Export anyway?", { ok: "YES", cancel: "NO" }).then(function(yes) {
+          if (yes) return notes;
+          return null;
+        });
+      }
+      return notes;
+    }).then(function(notes) {
+      if (!notes) return;
       const exportObj = { version: noteExportVersion, exportedAt: new Date().toISOString(), notes: notes };
       downloadBlob(new Blob([JSON.stringify(exportObj, null, 2)], { type: "application/json;charset=utf-8" }), "textcove-export-" + Date.now() + ".json");
       markBackup(); opfsBackup(notes); refreshStoreStatus();
@@ -1213,7 +1296,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
   function createNewNote() {
     stashPrev();
-    const autoName = generateNoteName(defaultNoteBase);
+    const autoName = reserveName(defaultNoteBase);
     currentNote = autoName; shownNote = autoName; dirty = false;
     safeSet("TextCove-current", autoName);
     title.value = autoName;
@@ -1225,6 +1308,8 @@ document.addEventListener("DOMContentLoaded", function() {
       markSaved();
       renderNoteList();
     }).catch(function(err) {
+      const ni = namesCache.indexOf(autoName);
+      if (ni !== -1) namesCache.splice(ni, 1);
       if (isQuotaError(err)) markError("Save failed: storage is full");
       renderNoteList();
     });
@@ -1302,7 +1387,8 @@ document.addEventListener("DOMContentLoaded", function() {
       return Promise.resolve(false);
     }
     const idx = bin.findIndex(function(x) { return x.name === t.name && x.value === t.value; });
-    const target = getNoteNames().indexOf(t.name) !== -1 ? generateNoteName(t.name) : t.name;
+    const target = getNoteNames().indexOf(t.name) !== -1 ? reserveName(t.name) : t.name;
+    if (namesCache.indexOf(target) === -1) namesCache.push(target);
     return idbPut(target, t.value).then(function() {
       if (t.pin && pins.indexOf(target) === -1) { pins.push(target); savePins(); }
       if (t.updated) { meta[target] = t.updated; saveMeta(); }
@@ -1390,7 +1476,12 @@ document.addEventListener("DOMContentLoaded", function() {
   const rootEl = document.documentElement;
 
   function currentThemeMode() {
-    return safeGet("TextCove-theme") === "night" ? "night" : "light";
+    const stored = safeGet("TextCove-theme");
+    if (stored === "night" || stored === "light") return stored;
+    try {
+      if (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) return "night";
+    } catch (err) {}
+    return "light";
   }
 
   function applyTheme() {
@@ -1406,6 +1497,20 @@ document.addEventListener("DOMContentLoaded", function() {
       themeIcon.setAttribute("xlink:href", ref);
     }
   }
+
+  function syncMenuExpanded() {
+    try {
+      if (notesBtn) notesBtn.setAttribute("aria-expanded", notesMenu.classList.contains("notes-menu--open") ? "true" : "false");
+      if (settings) settings.setAttribute("aria-expanded", setMenu.classList.contains("settings-menu--open") ? "true" : "false");
+    } catch (err) {}
+  }
+
+  try {
+    const menuSync = new MutationObserver(function() { syncMenuExpanded(); });
+    if (notesMenu) menuSync.observe(notesMenu, { attributes: true, attributeFilter: ["class"] });
+    if (setMenu) menuSync.observe(setMenu, { attributes: true, attributeFilter: ["class"] });
+  } catch (err) {}
+  syncMenuExpanded();
 
   if (hasStorage() === true || typeof indexedDB !== "undefined") {
     if (!hasStorage()) setTimeout(function() { showAlert("Browser storage is limited. Notes still work, but export often to keep them."); }, 0);
@@ -1504,7 +1609,11 @@ document.addEventListener("DOMContentLoaded", function() {
     });
 
     if (searchInput) {
-      searchInput.addEventListener("input", renderNoteList);
+      let searchTimer = null;
+      searchInput.addEventListener("input", function() {
+        if (searchTimer) clearTimeout(searchTimer);
+        searchTimer = setTimeout(renderNoteList, 250);
+      });
     }
     if (sortSelect) {
       const storedSort = safeGet("TextCove-sort");
@@ -1523,7 +1632,7 @@ document.addEventListener("DOMContentLoaded", function() {
         let chain = Promise.resolve();
         unnamed.forEach(function(bad) {
           chain = chain.then(function() {
-            const fixedName = generateNoteName(defaultNoteBase);
+            const fixedName = reserveName(defaultNoteBase);
             return idbGet(bad).then(function(v) {
               return idbPut(fixedName, v || "").then(function() { return idbDel(bad); }).then(function() {
                 if (safeGet("TextCove-current") === bad) safeSet("TextCove-current", fixedName);
@@ -1533,6 +1642,8 @@ document.addEventListener("DOMContentLoaded", function() {
           });
         });
         return chain;
+      }).then(refreshNames).then(function() {
+        return reconcileRecovery();
       }).then(refreshNames).then(function() {
         if (!getNoteNames().length) {
           return rescueMirrors().then(function(n) {
@@ -1565,7 +1676,8 @@ document.addEventListener("DOMContentLoaded", function() {
         if (sharedBody) {
           const rawBase = String(sharedTitle || sharedBody).split("\n")[0].trim().slice(0, 40) || defaultNoteBase;
           const base = sanitizeFileName(rawBase);
-          const target = getNoteNames().indexOf(base) !== -1 ? generateNoteName(base) : base;
+          const target = getNoteNames().indexOf(base) !== -1 ? reserveName(base) : base;
+          if (namesCache.indexOf(target) === -1) namesCache.push(target);
           stashPrev();
           currentNote = target; shownNote = target; dirty = false;
           safeSet("TextCove-current", target);
@@ -1634,7 +1746,8 @@ document.addEventListener("DOMContentLoaded", function() {
     const existingName = sanitizeFileName(title.value.trim() || currentNote);
     if (existingName !== "") {
       if (!currentNote) {
-        const finalName = getNoteNames().indexOf(existingName) !== -1 ? generateNoteName(existingName) : existingName;
+        const finalName = getNoteNames().indexOf(existingName) !== -1 ? reserveName(existingName) : existingName;
+        if (namesCache.indexOf(finalName) === -1) namesCache.push(finalName);
         currentNote = finalName; shownNote = finalName;
         safeSet("TextCove-current", finalName);
         title.value = finalName;
@@ -1655,7 +1768,9 @@ document.addEventListener("DOMContentLoaded", function() {
       if (answer === null) return;
       let finalName = sanitizeFileName((answer || "").trim() || generateNoteName(defaultNoteBase));
       if (getNoteNames().indexOf(finalName) !== -1) {
-        finalName = generateNoteName(finalName);
+        finalName = reserveName(finalName);
+      } else if (namesCache.indexOf(finalName) === -1) {
+        namesCache.push(finalName);
       }
       const oldName = currentNote;
       const val = content.value;
@@ -1827,6 +1942,12 @@ document.addEventListener("DOMContentLoaded", function() {
 
   previewBtn.addEventListener("click", function() {
     togglePreview();
+  });
+
+  window.addEventListener("beforeprint", function() {
+    try {
+      if (printTitle) printTitle.textContent = title.value || currentNote || "TextCove";
+    } catch (err) {}
   });
 
   copyBtn.addEventListener("click", function() {

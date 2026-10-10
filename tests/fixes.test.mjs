@@ -136,3 +136,54 @@ describe("manifest and css hygiene", () => {
     assert.ok(!css.includes("*,:before") && !css.includes("*:before"), "legacy selector remains");
   });
 });
+
+describe("service worker fallbacks", () => {
+  it("serves the 404 page and guards asset fallbacks", () => {
+    assert.ok(sw.includes("./404.html"), "missing 404 fallback");
+    assert.ok(sw.includes("event.request.destination"), "missing asset fallback guard");
+    assert.ok(sw.includes("./index.html"), "missing index fallback");
+  });
+  it("uses one cache key for the app shell", () => {
+    assert.ok(sw.includes("shellKey"), "app shell writes under two keys");
+  });
+});
+
+describe("list performance guards", () => {
+  it("debounces note search", () => {
+    assert.ok(app.includes("searchTimer") && app.includes("setTimeout(renderNoteList, 250)"), "search is not debounced");
+  });
+  it("bounds content search and caches the list", () => {
+    assert.ok(app.includes("slice(0, 50000)"), "content search is unbounded");
+    assert.ok(app.includes("listCache"), "list refetches on every keystroke");
+  });
+});
+
+describe("markdown code safety", () => {
+  it("shields code spans from inline formatting", () => {
+    assert.ok(app.includes("codes.push"), "code spans are not extracted");
+    assert.ok(app.includes("@@tc"), "missing code placeholder");
+  });
+});
+
+describe("dialog focus handling", () => {
+  it("restores focus and traps Tab", () => {
+    assert.ok(app.includes("lastFocus"), "dialog does not restore focus");
+    assert.ok(app.includes("restoreFocus"), "missing focus restore");
+  });
+});
+
+describe("menus expose expanded state", () => {
+  it("syncs aria-expanded centrally", () => {
+    assert.ok(app.includes("syncMenuExpanded"), "missing menu sync");
+    assert.ok(app.includes("MutationObserver"), "sync does not cover every path");
+  });
+});
+
+describe("crash recovery and naming", () => {
+  it("reconciles recovery copies at boot", () => {
+    assert.ok(app.includes("reconcileRecovery"), "recovery is ignored when notes exist");
+  });
+  it("reserves note names synchronously", () => {
+    assert.ok(app.includes("reserveName"), "name race remains");
+  });
+});

@@ -1,5 +1,5 @@
 "use strict";
-const cacheName = "textcove-9ad899c1";
+const cacheName = "textcove-3d43744f";
 const assets = [
   "./",
   "./index.html",
@@ -64,6 +64,12 @@ self.addEventListener("fetch", function(event) {
           caches.open(cacheName).then(function(cache) {
             cache.put("./index.html", copy);
           }).catch(function() {});
+          return response;
+        }
+        if (response && response.status === 404) {
+          return caches.match("./404.html", { ignoreSearch: true }).then(function(page) {
+            return page || response;
+          });
         }
         return response;
       }).catch(function() {
@@ -83,17 +89,18 @@ self.addEventListener("fetch", function(event) {
     path.slice(-7) === "app.css"
   );
   if (isAppShell) {
+    const shellKey = (path === "/" || path.slice(-1) === "/" || path.slice(-10) === "index.html") ? "./index.html" : event.request;
     event.respondWith(
       fetch(event.request).then(function(response) {
         if (response && response.ok) {
           const copy = response.clone();
           caches.open(cacheName).then(function(cache) {
-            cache.put(event.request, copy);
+            cache.put(shellKey, copy);
           }).catch(function() {});
         }
         return response;
       }).catch(function() {
-        return caches.match(event.request, { ignoreSearch: false });
+        return caches.match(shellKey, { ignoreSearch: false });
       })
     );
     return;
@@ -112,6 +119,10 @@ self.addEventListener("fetch", function(event) {
         }
         return response;
       }).catch(function() {
+        const dest = event.request.destination;
+        if (dest === "image" || dest === "font" || dest === "audio" || dest === "video") {
+          return new Response("", { status: 404, statusText: "Not Found" });
+        }
         return caches.match("./index.html", { ignoreSearch: true });
       });
     })

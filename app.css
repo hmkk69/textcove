@@ -80,26 +80,20 @@ input[type="text"],textarea {
 ::-webkit-input-placeholder {
     color: #767676;
 }
-:-moz-placeholder {
-    color: #767676;
-}
 ::-moz-placeholder {
     color: #767676;
 }
-:-ms-input-placeholder {
+::placeholder {
     color: #767676;
 }
 
 input#fileName::-webkit-input-placeholder {
     font-weight: bold;
 }
-input#fileName:-moz-placeholder {
-    font-weight: bold;
-}
 input#fileName::-moz-placeholder {
     font-weight: bold;
 }
-input#fileName:-ms-input-placeholder {
+input#fileName::placeholder {
     font-weight: bold;
 }
 
@@ -203,7 +197,6 @@ nav a {
 .btn-group {
   flex: 2;
   text-align: right;
-  padding: .5em 2em 0 0;
 }
 
 
@@ -843,6 +836,10 @@ html.night .rename-banner {
   height: 100%;
 }
 
+.print-title {
+  display: none;
+}
+
 .preview {
   resize: none;
   background: inherit;
@@ -1045,11 +1042,6 @@ html.night .rename-banner {
 
 .preview-btn--active svg {
   fill: #a0d92e;
-}
-
-.info-btn:hover svg {
-  fill: #61cce0;
-  transform: scale(1.08);
 }
 
 #theme:hover svg {
@@ -1258,6 +1250,12 @@ html.night #theme:hover svg {
   #previewToggle,
   #copyNote {
     display: none;
+  }
+  .print-title {
+    display: block;
+    font-weight: bold;
+    font-size: 1.2em;
+    margin-bottom: .5em;
   }
   body {
     padding: 0;

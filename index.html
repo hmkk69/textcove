@@ -31,6 +31,7 @@
 	<link rel="icon" type="image/png" sizes="192x192" href="assets/icon-192.png">
 	<link rel="icon" type="image/png" sizes="512x512" href="assets/icon-512.png">
 	<link rel="apple-touch-icon" href="assets/icon-192.png">
+	<script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","name":"TextCove","applicationCategory":"ProductivityApplication","operatingSystem":"Web","offers":{"@type":"Offer","price":"0"},"url":"https://tc.hmkkk.qzz.io/"}</script>
 	<link href="app.css" rel="stylesheet">
 </head>
 <body>
@@ -115,11 +116,12 @@
 		<p>A quiet notepad with no distractions. Just write, it saves on this device as you go. When something matters, keep a copy with Backup.</p>
 		<p class="offline-tip">Tip: You can use TextCove when offline!</p>
 		<button id="start">Start Writing</button>
-		<p class="footnote">Source code: <a href="//github.com/hmkk69/textcove">hmkk69/textcove</a> · <a href="CHANGELOG.md">Changelog</a></p>
+		<p class="footnote">Source code: <a href="//github.com/hmkk69/textcove">hmkk69/textcove</a> - <a href="CHANGELOG.md">Changelog</a></p>
 		<p class="footnote">Contact: <a href="mailto:kujouu@proton.me">kujouu@proton.me</a></p>
 		<p class="footnote">Many thanks to <a href="//github.com/syndicatefx">Paulo Nunes</a> for the original <a href="//github.com/syndicatefx/TextPad">TextPad</a> project!</p>
 	</section>
 </div>
+<div id="printTitle" class="print-title" aria-hidden="true"></div>
 <main class="editor">
 	<label class="visually-hidden" for="fileContent">Note content</label>
 	<textarea id="fileContent" placeholder="Start Writing..." spellcheck="false"></textarea>

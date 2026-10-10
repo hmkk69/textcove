@@ -1,14 +1,20 @@
 "use strict";
 (function() {
   try {
-    if (localStorage.getItem("TextCove-theme") === "night" || localStorage.getItem("SimpleJot-theme") === "night") {
+    var themeStored = null;
+    try { themeStored = localStorage.getItem("TextCove-theme") || localStorage.getItem("SimpleJot-theme"); } catch (err) {}
+    var themeNight = themeStored === "night";
+    if (!themeStored) {
+      try { themeNight = !!window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches; } catch (err) {}
+    }
+    if (themeNight) {
       document.documentElement.classList.add("night");
     }
   } catch (err) {}
   var refreshing = false;
   var hadController = ("serviceWorker" in navigator) && !!navigator.serviceWorker.controller;
   var isHttp = window.location.protocol === "http:" || window.location.protocol === "https:";
-  var checkInterval = 60000;
+  var checkInterval = 900000;
   var watchedReg = null;
   function reloadOnce() {
     if (refreshing) return;
@@ -74,11 +80,7 @@
       }).catch(function() {});
     });
     window.addEventListener("online", checkForUpdate);
-    window.addEventListener("focus", checkForUpdate);
     window.addEventListener("pageshow", checkForUpdate);
-    document.addEventListener("visibilitychange", function() {
-      if (!document.hidden) checkForUpdate();
-    });
     setInterval(checkForUpdate, checkInterval);
     navigator.serviceWorker.addEventListener("controllerchange", function() {
       if (!hadController) {

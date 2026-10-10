@@ -3,6 +3,15 @@
 All notable changes to TextCove are documented here, newest first.
 Dates follow the project commit history.
 
+## 2026-10-10
+
+- Perf: debounced search, 2s list cache, content search capped at 50k chars per note.
+- Reliability: boot reconciles crash-recovery copies, note names reserved synchronously, large backup asks before export.
+- PWA: worker serves 404.html on 404s, empty 404 for images/fonts offline, single cache key for the app shell, update poll relaxed to 15 minutes.
+- UX/a11y: first-run theme follows the OS, centralized aria-expanded sync, dialog focus restore plus Tab trap, print shows the note title, JSON-LD metadata.
+- Markdown: code spans shielded from bold/italic/link formatting.
+- Housekeeping: legacy placeholder selectors and duplicate CSS removed, CI runs test plus syntax check.
+
 ## 2026-10-09
 
 - Desktop PWA install: open `.txt` files straight into the app (`file_handlers`), receive shared text/links (`share_target`), handle `web+textcove` links (`protocol_handlers`) and reuse the open window (`launch_handler`).

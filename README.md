@@ -70,7 +70,7 @@ textcove/
 ## Development
 
 ```bash
-npm run dev     # serve locally at http://localhost:8080 (required: service workers and PWA install do not work over file://)
+npm run dev     # serve locally at http://localhost:6969 (required: service workers and PWA install do not work over file://)
 npm run build   # stamp a content hash into the service-worker cache name
 npm test        # run the test suites
 npm run check   # syntax-check the JavaScript
