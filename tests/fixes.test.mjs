@@ -49,6 +49,10 @@ describe("safe delete with undo", () => {
     assert.ok(app.includes("function undoLastDelete"), "missing undo");
     assert.ok(app.includes("click here to undo"), "missing undo hint");
   });
+  it("opens the nearest note after deleting the current one", () => {
+    assert.ok(app.includes("function openFallbackNote"), "missing fallback helper");
+    assert.ok(app.includes("openNextAfterDelete"), "delete does not fall back to another note");
+  });
 });
 
 describe("import and filename safety", () => {

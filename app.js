@@ -832,7 +832,16 @@ document.addEventListener("DOMContentLoaded", function() {
   function openFallbackNote(exclude) {
     const others = getNoteNames().filter(function(n) { return n !== exclude; });
     if (others.length) return openNote(sortedNames(others)[0]);
-    createNewNote();
+    return createNewNote();
+  }
+
+  function openNextAfterDelete(deletedName) {
+    currentNote = ""; shownNote = ""; dirty = false;
+    safeRemove("TextCove-current");
+    Promise.resolve(openFallbackNote(deletedName)).catch(function() {}).then(function() {
+      setStatus("saved", "Deleted \u201c" + deletedName + "\u201d, click here to undo");
+      renderNoteList();
+    });
   }
 
   function handleOversizedNote(name, value) {
@@ -999,15 +1008,11 @@ document.addEventListener("DOMContentLoaded", function() {
         return idbDel(name);
       }).then(function() {
         clearRecovery(name);
-        if (name === currentNote) {
-          currentNote = ""; shownNote = ""; dirty = false;
-          safeRemove("TextCove-current");
-          title.value = "";
-          content.value = "";
-          updateCounters();
+        if (name === currentNote) openNextAfterDelete(name);
+        else {
+          setStatus("saved", "Deleted \u201c" + name + "\u201d, click here to undo");
+          renderNoteList();
         }
-        setStatus("saved", "Deleted \u201c" + name + "\u201d, click here to undo");
-        renderNoteList();
       }).catch(function() {
         renderNoteList();
       });
@@ -1302,7 +1307,7 @@ document.addEventListener("DOMContentLoaded", function() {
     if (previewOpen) togglePreview(false);
     updateCounters();
     setStatus("ready", "Ready");
-    idbPut(autoName, "").then(function() {
+    return idbPut(autoName, "").then(function() {
       markSaved();
       renderNoteList();
     }).catch(function(err) {
@@ -1807,14 +1812,18 @@ document.addEventListener("DOMContentLoaded", function() {
           pushTrash({ name: doomed, value: doomedVal, pin: wasPinned, updated: wasUpdated });
           clearRecovery(doomed);
         }
-        safeRemove("TextCove-current");
-        currentNote = ""; shownNote = ""; dirty = false;
-        title.value = "";
-        content.value = "";
-        if (previewOpen) togglePreview(false);
-        updateCounters();
-        setStatus("saved", doomed ? "Deleted \u201c" + doomed + "\u201d, click here to undo" : "Ready");
-        renderNoteList();
+        if (!doomed) {
+          safeRemove("TextCove-current");
+          currentNote = ""; shownNote = ""; dirty = false;
+          title.value = "";
+          content.value = "";
+          if (previewOpen) togglePreview(false);
+          updateCounters();
+          setStatus("saved", "Ready");
+          renderNoteList();
+          return;
+        }
+        openNextAfterDelete(doomed);
       };
       if (doomed) { idbDel(doomed).then(done).catch(done); }
       else done();
