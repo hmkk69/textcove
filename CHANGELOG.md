@@ -5,7 +5,7 @@ Dates follow the project commit history.
 
 ## 2026-10-10
 
-- UX: undo-delete button in the top bar next to settings, footer status is plain text (green while saving or saved, red on error), install notice removed.
+- UX: footer status is plain text (green while saving or saved, red on error), install notice removed.
 - Perf: debounced search, 2s list cache, content search capped at 50k chars per note.
 - Reliability: boot reconciles crash-recovery copies, note names reserved synchronously, large backup asks before export.
 - PWA: worker serves 404.html on 404s, empty 404 for images/fonts offline, single cache key for the app shell, update poll relaxed to 15 minutes.

@@ -57,7 +57,6 @@ document.addEventListener("DOMContentLoaded", function() {
   const dialogOk = document.getElementById("dialogOk");
   const dialogCancel = document.getElementById("dialogCancel");
   const installTip = document.getElementById("installTip");
-  const undoBtn = document.getElementById("undo");
 
   let deferredInstall = null;
 
@@ -428,7 +427,7 @@ document.addEventListener("DOMContentLoaded", function() {
   function mirrorAll() { return prefixScan(notesPrefix); }
   function recoveryAll() { return prefixScan(recoveryPrefix); }
   function getTrash() { try { const t = JSON.parse(safeGet(trashKey) || "[]"); return Array.isArray(t) ? t : []; } catch (err) { return []; } }
-  function setTrash(t) { safeSet(trashKey, JSON.stringify((t || []).slice(0, trashMax))); try { trashCount.textContent = String(getTrash().length); } catch (err) {} renderTrash(); syncUndoBtn(); }
+  function setTrash(t) { safeSet(trashKey, JSON.stringify((t || []).slice(0, trashMax))); try { trashCount.textContent = String(getTrash().length); } catch (err) {} renderTrash(); }
   function pushTrash(o) { const t = getTrash(); t.unshift({ name: o.name, value: o.value, pin: !!o.pin, updated: o.updated || 0, deletedAt: Date.now() }); setTrash(t.filter(function(x) { return Date.now() - (x.deletedAt || 0) < trashDays * 864e5; }).slice(0, trashMax)); lastTrash = o; }
   function pruneTrash() { setTrash(getTrash().filter(function(x) { return Date.now() - (x.deletedAt || 0) < trashDays * 864e5; })); }
   function markBackup() { safeSet(backupKey, String(Date.now())); }
@@ -1384,13 +1383,6 @@ document.addEventListener("DOMContentLoaded", function() {
     return cleaned || defaultNoteBase;
   }
 
-  function syncUndoBtn() {
-    if (!undoBtn) return;
-    try {
-      undoBtn.disabled = !(lastTrash || getTrash().length);
-    } catch (err) {}
-  }
-
   function undoLastDelete() {
     const bin = getTrash();
     const t = lastTrash || bin[0];
@@ -1406,7 +1398,6 @@ document.addEventListener("DOMContentLoaded", function() {
       if (t.updated) { meta[target] = t.updated; saveMeta(); }
       if (idx !== -1) { bin.splice(idx, 1); setTrash(bin); }
       lastTrash = null;
-      syncUndoBtn();
       if (!currentNote) return openNote(target);
       renderNoteList();
       setStatus("saved", "Brought back \u201c" + target + "\u201d");
@@ -1857,13 +1848,6 @@ document.addEventListener("DOMContentLoaded", function() {
 
   newNote.addEventListener("click", createNewNote);
 
-  if (undoBtn) {
-    undoBtn.addEventListener("click", function() {
-      undoLastDelete().catch(function() {});
-    });
-    syncUndoBtn();
-  }
-
   fs.addEventListener("input", function() {
     const val = fs.value;
     content.style.fontSize = val + "em";
@@ -1905,7 +1889,7 @@ document.addEventListener("DOMContentLoaded", function() {
   saveStatus.style.cursor = "pointer";
   saveStatus.title = "Click to undo delete when available";
   try { if (trashToggle) trashToggle.addEventListener("click", function() { renderTrash(); trashList.hidden = !trashList.hidden; }); } catch (err) {}
-  try { if (trashEmpty) trashEmpty.addEventListener("click", function() { showConfirm("Empty trash forever?", { ok: "YES", cancel: "NO" }).then(function(yes) { if (yes) { lastTrash = null; setTrash([]); } }); }); } catch (err) {}
+  try { if (trashEmpty) trashEmpty.addEventListener("click", function() { showConfirm("Empty trash forever?", { ok: "YES", cancel: "NO" }).then(function(yes) { if (yes) { setTrash([]); lastTrash = null; } }); }); } catch (err) {}
 
   document.addEventListener("click", function(e) {
     const inNotes = notesMenu.contains(e.target) || notesBtn.contains(e.target);
