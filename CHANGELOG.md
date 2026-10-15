@@ -17,6 +17,7 @@ Dates follow the project commit history.
 - UX: header logo no longer overlaps the brand text and keeps one icon gray in both themes.
 - Housekeeping: removed `renamed.html` and its cache, build and test references.
 - UX: backup with no content explains there is nothing to back up yet instead of downloading an empty file.
+- Housekeeping: pin LF line endings and normalize the build hash input so the `sw.js` stamp matches on Windows and CI.
 
 ## 2026-10-10
 
