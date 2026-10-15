@@ -654,14 +654,8 @@ footer {
 
 .logo {
   position: relative;
+  left: 49px;
   margin-right: 6px;
-  margin-left: 8px;
-  flex-shrink: 0;
-  color: #767676;
-}
-
-html.night .logo {
-  color: #c3c9d4;
 }
 
 .offline-tip {

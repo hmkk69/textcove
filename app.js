@@ -1370,6 +1370,10 @@ document.addEventListener("DOMContentLoaded", function() {
     }).then(function(notes) {
       let total = 0;
       Object.keys(notes).forEach(function(k) { total += String(notes[k] || "").length; });
+      if (total === 0) {
+        showAlert("There is nothing to back up yet. Write something first.");
+        return null;
+      }
       if (total > 10000000) {
         return showConfirm("Backup is large (" + formatSize(total) + "). Export anyway?", { ok: "YES", cancel: "NO" }).then(function(yes) {
           if (yes) return notes;

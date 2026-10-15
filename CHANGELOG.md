@@ -16,6 +16,7 @@ Dates follow the project commit history.
 - UX: deleting an empty note explains it is empty instead of silently doing nothing; Shift-click still removes it permanently.
 - UX: header logo no longer overlaps the brand text and keeps one icon gray in both themes.
 - Housekeeping: removed `renamed.html` and its cache, build and test references.
+- UX: backup with no content explains there is nothing to back up yet instead of downloading an empty file.
 
 ## 2026-10-10
 
