@@ -654,8 +654,14 @@ footer {
 
 .logo {
   position: relative;
-  left: 49px;
   margin-right: 6px;
+  margin-left: 8px;
+  flex-shrink: 0;
+  color: #767676;
+}
+
+html.night .logo {
+  color: #c3c9d4;
 }
 
 .offline-tip {
@@ -698,15 +704,35 @@ body.is-offline .store-status {
 @media (max-width: 48em) { .store-status { display: none; } }
 
 .visually-hidden {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
-  white-space: nowrap;
-  border: 0;
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	padding: 0;
+	margin: -1px;
+	overflow: hidden;
+	clip: rect(0 0 0 0);
+	white-space: nowrap;
+	border: 0;
+}
+
+.skip-link {
+	position: absolute;
+	top: -3em;
+	left: 1em;
+	z-index: 10;
+	background: #fff;
+	color: inherit;
+	padding: .5em 1em;
+	border-radius: 8px;
+	border: 2px solid #61cce0;
+}
+
+.skip-link:focus {
+	top: .5em;
+}
+
+.night .skip-link {
+	background: #1f242c;
 }
 
 button:focus-visible,
@@ -821,6 +847,25 @@ header nav {
   list-style: disc;
   padding-left: 1.5em;
   margin: 0 0 .8em;
+}
+
+.preview ol {
+  padding-left: 1.5em;
+  margin: 0 0 .8em;
+}
+
+.preview hr {
+  border: 0;
+  border-top: 2px solid #eee;
+  margin: 1em 0;
+}
+
+.night .preview hr {
+  border-top-color: #353c48;
+}
+
+.preview del {
+  opacity: .75;
 }
 
 .preview li {

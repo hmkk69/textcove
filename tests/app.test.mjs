@@ -89,7 +89,6 @@ describe("project files", () => {
   const required = [
     "index.html",
     "404.html",
-    "renamed.html",
     "app.css",
     "app.js",
     "boot.js",

@@ -345,10 +345,16 @@ document.addEventListener("DOMContentLoaded", function() {
   const idbStore = "notes";
   const saveDelay = 250;
   const recoveryThrottle = 1500;
-  var mirrorLimit = 100000;
-  var trashMax = 30;
-  var trashDays = 30;
-  var backupDays = 7;
+  const mirrorLimit = 100000;
+  const trashMax = 30;
+  const trashDays = 30;
+  const backupDays = 7;
+  const maxLinePaddingEm = 12;
+  const maxFileSize = 5 * 1024 * 1024;
+  const maxTextLen = 1000000;
+  const maxImportNotes = 200;
+  let lastTrash = null;
+  let deleteRunning = false;
   let _dbPromise = null;
   let namesCache = [];
   let saveTimer = null;
@@ -418,6 +424,7 @@ document.addEventListener("DOMContentLoaded", function() {
   }
 
   function touchMeta(name) {
+    if (!name || isReservedName(name)) return;
     meta[name] = Date.now();
     saveMeta();
   }
@@ -509,8 +516,13 @@ document.addEventListener("DOMContentLoaded", function() {
     });
   }
 
+  function invalidateListCache() {
+    listCache = { at: 0, data: null };
+  }
+
   function idbPut(name, value) {
     mirrorPut(name, value);
+    invalidateListCache();
     if (!useIdb) return lsPutItem(name, value);
     const rec = { c: value || "", u: Date.now() };
     return idbTx("readwrite", function(s) { return s.put(rec, name); }).then(function() {
@@ -525,6 +537,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
   function idbDel(name) {
     mirrorDel(name);
+    invalidateListCache();
     if (!useIdb) return lsDelItem(name);
     return idbTx("readwrite", function(s) { return s.delete(name); }).then(function() {
       dropFromCaches(name);
@@ -836,12 +849,15 @@ document.addEventListener("DOMContentLoaded", function() {
     return createNewNote();
   }
 
-  function openNextAfterDelete(deletedName) {
+  function openNextAfterDelete(deletedName, hasUndo) {
     currentNote = ""; shownNote = ""; dirty = false;
     safeRemove("TextCove-current");
-    Promise.resolve(openFallbackNote(deletedName)).catch(function() {}).then(function() {
-      setStatus("saved", "Deleted \u201c" + deletedName + "\u201d, click here to undo");
+    return Promise.resolve(openFallbackNote(deletedName)).catch(function() {}).then(function() {
+      if (hasUndo === false) setStatus("saved", "Deleted \u201c" + deletedName + "\u201d");
+      else setStatus("saved", "Deleted \u201c" + deletedName + "\u201d, click here to undo");
       renderNoteList();
+    }).then(function() {
+      deleteRunning = false;
     });
   }
 
@@ -972,12 +988,12 @@ document.addEventListener("DOMContentLoaded", function() {
         });
         const delBtn = document.createElement("button");
         delBtn.className = "note-delete";
-        delBtn.title = "Delete note";
+        delBtn.title = "Move to Trash, Shift-click to delete permanently";
         delBtn.setAttribute("aria-label", "Delete note " + name);
         delBtn.setAttribute("data-note", name);
         delBtn.textContent = "\u00d7";
-        delBtn.addEventListener("click", function() {
-          trashNote(this.getAttribute("data-note"));
+        delBtn.addEventListener("click", function(e) {
+          trashNote(this.getAttribute("data-note"), !!(e && e.shiftKey));
         });
         li.appendChild(main);
         li.appendChild(pinBtn);
@@ -997,27 +1013,80 @@ document.addEventListener("DOMContentLoaded", function() {
     });
   }
 
-  function trashNote(name) {
-    showConfirm("Delete note \u201c" + name + "\u201d? It will be moved to the Trash after you click delete, and automatically deleted after 30 days.", { ok: "YES", cancel: "NO" }).then(function(yes) {
-      if (!yes) return;
-      if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
-      idbGet(name).then(function(v) {
-        pushTrash({ name: name, value: String(v === null || v === undefined ? "" : v), pin: pins.indexOf(name) !== -1, updated: meta[name] || 0 });
+  function moveNoteToTrash(name) {
+    if (!name || deleteRunning) return;
+    deleteRunning = true;
+    if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
+    const liveText = (name === currentNote) ? content.value : null;
+    const collect = function() {
+      if (liveText !== null) return Promise.resolve(String(liveText || ""));
+      return idbGet(name).then(function(v) {
+        return String(v === null || v === undefined ? "" : v);
       }).catch(function() {
-        pushTrash({ name: name, value: "", pin: false, updated: 0 });
-      }).then(function() {
-        return idbDel(name);
-      }).then(function() {
-        clearRecovery(name);
-        if (name === currentNote) openNextAfterDelete(name);
-        else {
-          setStatus("saved", "Deleted \u201c" + name + "\u201d, click here to undo");
-          renderNoteList();
-        }
-      }).catch(function() {
+        return "";
+      });
+    };
+    collect().then(function(text) {
+      if (text === "") {
+        deleteRunning = false;
+        showAlert("This note is empty. Write something first, there is nothing to move to Trash. To remove it anyway, Shift-click delete.");
         renderNoteList();
+        return null;
+      }
+      pushTrash({ name: name, value: text, pin: pins.indexOf(name) !== -1, updated: meta[name] || 0 });
+      return true;
+    }).then(function(trashed) {
+      if (trashed === null) return null;
+      return idbDel(name).then(function() {
+        return trashed;
+      });
+    }).then(function(trashed) {
+      if (trashed === null) return;
+      clearRecovery(name);
+      if (name === currentNote) return openNextAfterDelete(name, trashed);
+      if (trashed) setStatus("saved", "Deleted \u201c" + name + "\u201d, click here to undo");
+      else setStatus("saved", "Deleted \u201c" + name + "\u201d");
+      renderNoteList();
+    }).catch(function() {
+      renderNoteList();
+    }).then(function() {
+      deleteRunning = false;
+    });
+  }
+
+  function deleteNotePermanent(name) {
+    if (!name || deleteRunning) return;
+    showConfirm("Delete \u201c" + name + "\u201d permanently? This cannot be undone.", { ok: "YES", cancel: "NO" }).then(function(yes) {
+      if (!yes) return;
+      deleteRunning = true;
+      if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
+      idbDel(name).then(function() {
+        clearRecovery(name);
+      }).catch(function() {}).then(function() {
+        if (name === currentNote) {
+          currentNote = ""; shownNote = ""; dirty = false;
+          safeRemove("TextCove-current");
+          Promise.resolve(openFallbackNote(name)).catch(function() {}).then(function() {
+            setStatus("saved", "Deleted \u201c" + name + "\u201d permanently");
+            renderNoteList();
+          }).then(function() {
+            deleteRunning = false;
+          });
+        } else {
+          setStatus("saved", "Deleted \u201c" + name + "\u201d permanently");
+          renderNoteList();
+          deleteRunning = false;
+        }
       });
     });
+  }
+
+  function trashNote(name, isPermanent) {
+    if (isPermanent) {
+      deleteNotePermanent(name);
+      return;
+    }
+    moveNoteToTrash(name);
   }
   function renderTrash() { try { if (!trashList) return; const t = getTrash(); if (trashCount) trashCount.textContent = String(t.length); trashList.innerHTML = ""; t.forEach(function(x, i) { const li = document.createElement("li"); li.className = "trash-row"; const b = document.createElement("span"); b.className = "note-name"; b.textContent = x.name; const r = document.createElement("button"); r.className = "trash-restore"; r.textContent = "Restore"; r.setAttribute("aria-label", "Restore " + x.name); r.addEventListener("click", function() { restoreTrash(i); }); const d = document.createElement("button"); d.className = "note-delete"; d.textContent = "\u00d7"; d.setAttribute("aria-label", "Delete forever " + x.name); d.addEventListener("click", function() { wipeTrash(i); }); li.appendChild(b); li.appendChild(r); li.appendChild(d); trashList.appendChild(li); }); if (trashEmpty) trashEmpty.style.display = t.length ? "" : "none"; } catch (err) {} }
   function restoreTrash(i) { const t = getTrash(), x = t[i]; if (!x) return Promise.resolve(false); const target = getNoteNames().indexOf(x.name) !== -1 ? reserveName(x.name) : x.name; if (namesCache.indexOf(target) === -1) namesCache.push(target); return idbPut(target, x.value).then(function() { if (x.pin && pins.indexOf(target) === -1) { pins.push(target); savePins(); } if (x.updated) { meta[target] = x.updated; saveMeta(); } t.splice(i, 1); setTrash(t); if (lastTrash && lastTrash.name === x.name && lastTrash.value === x.value) lastTrash = null; if (!currentNote) return openNote(target); renderNoteList(); setStatus("saved", "Restored \u201c" + target + "\u201d"); return true; }).catch(function() { showAlert("Restore failed. Storage may be full."); return false; }); }
@@ -1064,6 +1133,7 @@ document.addEventListener("DOMContentLoaded", function() {
       return "@@tc" + (codes.length - 1) + "@@";
     });
     out = out.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+    out = out.replace(/~~([^~\n]+)~~/g, "<del>$1</del>");
     out = out.replace(/(^|\W)\*([^*\n]+)\*/g, "$1<em>$2</em>");
     out = out.replace(/(^|\W)_([^_\n]+)_/g, "$1<em>$2</em>");
     out = out.replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, "<a href=\"$2\" target=\"_blank\" rel=\"noopener\">$1</a>");
@@ -1077,11 +1147,16 @@ document.addEventListener("DOMContentLoaded", function() {
     const lines = escapeHtml(src).split("\n");
     let html = "";
     let inList = false;
+    let inOrdered = false;
     let inCode = false;
     const closeList = function() {
       if (inList) {
         html += "</ul>";
         inList = false;
+      }
+      if (inOrdered) {
+        html += "</ol>";
+        inOrdered = false;
       }
     };
     for (let i = 0; i < lines.length; i++) {
@@ -1096,6 +1171,11 @@ document.addEventListener("DOMContentLoaded", function() {
         html += line + "\n";
         continue;
       }
+      if (/^\s*(-{3,}|\*{3,})\s*$/.test(line)) {
+        closeList();
+        html += "<hr>";
+        continue;
+      }
       const heading = /^(#{1,6})\s+(.*)/.exec(line);
       if (heading) {
         closeList();
@@ -1105,13 +1185,22 @@ document.addEventListener("DOMContentLoaded", function() {
       }
       const task = /^\s*-\s+\[([ xX])\]\s+(.*)/.exec(line);
       if (task) {
+        if (inOrdered) { html += "</ol>"; inOrdered = false; }
         if (!inList) { html += "<ul>"; inList = true; }
         const checked = task[1].toLowerCase() === "x" ? " checked disabled" : " disabled";
         html += "<li class=\"task\"><input type=\"checkbox\"" + checked + "><span>" + inlineMd(task[2]) + "</span></li>";
         continue;
       }
+      const ordered = /^\s*\d+[.)]\s+(.*)/.exec(line);
+      if (ordered) {
+        if (inList) { html += "</ul>"; inList = false; }
+        if (!inOrdered) { html += "<ol>"; inOrdered = true; }
+        html += "<li>" + inlineMd(ordered[1]) + "</li>";
+        continue;
+      }
       const bullet = /^\s*-\s+(.*)/.exec(line);
       if (bullet) {
+        if (inOrdered) { html += "</ol>"; inOrdered = false; }
         if (!inList) { html += "<ul>"; inList = true; }
         html += "<li>" + inlineMd(bullet[1]) + "</li>";
         continue;
@@ -1322,26 +1411,7 @@ document.addEventListener("DOMContentLoaded", function() {
     content.focus();
   }
 
-  function commitRename() {
-    const rawName = title.value.trim();
-    const newName = sanitizeFileName(rawName);
-    if (!rawName) {
-      title.value = currentNote;
-      return;
-    }
-    if (newName !== rawName) title.value = newName;
-    if (newName === currentNote) {
-      title.value = currentNote;
-      return;
-    }
-    if (getNoteNames().indexOf(newName) !== -1) {
-      showAlert("A note named \u201c" + newName + "\u201d already exists. Please choose another name.");
-      title.value = currentNote;
-      title.focus();
-      return;
-    }
-    const oldName = currentNote;
-    const val = content.value;
+  function applyRename(oldName, newName, val) {
     if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
     currentNote = newName; shownNote = newName;
     safeSet("TextCove-current", newName);
@@ -1366,11 +1436,32 @@ document.addEventListener("DOMContentLoaded", function() {
     });
   }
 
-  var maxLinePaddingEm = 12;
-  var maxFileSize = 5 * 1024 * 1024;
-  var maxTextLen = 1000000;
-  var maxImportNotes = 200;
-  var lastTrash = null;
+  function commitRename() {
+    const rawName = title.value.trim();
+    const newName = sanitizeFileName(rawName);
+    if (!rawName) {
+      title.value = currentNote;
+      return;
+    }
+    if (newName !== rawName) title.value = newName;
+    if (newName === currentNote) {
+      title.value = currentNote;
+      return;
+    }
+    if (getNoteNames().indexOf(newName) !== -1) {
+      const suggestion = generateNoteName(newName);
+      showConfirm("A note named \u201c" + newName + "\u201d already exists. Use \u201c" + suggestion + "\u201d instead?", { ok: "YES", cancel: "NO" }).then(function(yes) {
+        if (yes) {
+          applyRename(currentNote, suggestion, content.value);
+        } else {
+          title.value = currentNote;
+          title.focus();
+        }
+      });
+      return;
+    }
+    applyRename(currentNote, newName, content.value);
+  }
 
   function clampLineWidth(v) {
     const n = parseFloat(v);
@@ -1378,8 +1469,14 @@ document.addEventListener("DOMContentLoaded", function() {
     return Math.min(maxLinePaddingEm, Math.max(1, n));
   }
 
+  function isReservedName(name) {
+    const lower = String(name || "").toLowerCase();
+    return lower === "__proto__" || lower === "constructor" || lower === "prototype";
+  }
+
   function sanitizeFileName(name) {
-    const cleaned = String(name || "").replace(/[\\/:*?"<>|]/g, "-").trim().slice(0, 120);
+    let cleaned = String(name || "").replace(/[\\/:*?"<>|]/g, "-").replace(/[\u0000-\u001f\u007f]+/g, "").trim().slice(0, 120);
+    if (isReservedName(cleaned)) cleaned = defaultNoteBase;
     return cleaned || defaultNoteBase;
   }
 
@@ -1501,6 +1598,15 @@ document.addEventListener("DOMContentLoaded", function() {
       themeIcon.setAttribute("xlink:href", ref);
     }
   }
+
+  try {
+    const schemeQuery = window.matchMedia ? window.matchMedia("(prefers-color-scheme: dark)") : null;
+    const followSystem = function() {
+      if (safeGet("TextCove-theme") === null) applyTheme();
+    };
+    if (schemeQuery && typeof schemeQuery.addEventListener === "function") schemeQuery.addEventListener("change", followSystem);
+    else if (schemeQuery && typeof schemeQuery.addListener === "function") schemeQuery.addListener(followSystem);
+  } catch (err) {}
 
   function syncMenuExpanded() {
     try {
@@ -1795,22 +1901,28 @@ document.addEventListener("DOMContentLoaded", function() {
     });
   }, false);
 
-  clear.addEventListener("click", function() {
-    if (content.value === "" && title.value === "") {
-      showAlert("There is nothing to delete. Go ahead and write something first.");
+  clear.addEventListener("click", function(e) {
+    if (deleteRunning) return;
+    const isPermanent = !!(e && e.shiftKey);
+    if (isPermanent && currentNote) {
+      deleteNotePermanent(currentNote);
       return;
     }
-    const doomedLabel = currentNote || title.value.trim() || "this note";
-    showConfirm("Delete \u201c" + doomedLabel + "\u201d? It will be moved to the Trash after you click delete, and automatically deleted after 30 days.", { ok: "YES", cancel: "NO" }).then(function(yes) {
-      if (!yes) return;
-      if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
-      const doomed = currentNote;
+    if (content.value === "") {
+      showAlert("This note is empty. Write something first, there is nothing to delete. To remove it anyway, Shift-click delete.");
+      return;
+    }
+    deleteRunning = true;
+    if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
+    const doomed = currentNote;
       const doomedVal = content.value;
       const wasPinned = doomed ? pins.indexOf(doomed) !== -1 : false;
       const wasUpdated = doomed ? (meta[doomed] || 0) : 0;
       const done = function() {
-        if (doomed) {
+        if (doomed && doomedVal !== "") {
           pushTrash({ name: doomed, value: doomedVal, pin: wasPinned, updated: wasUpdated });
+          clearRecovery(doomed);
+        } else if (doomed) {
           clearRecovery(doomed);
         }
         if (!doomed) {
@@ -1822,13 +1934,13 @@ document.addEventListener("DOMContentLoaded", function() {
           updateCounters();
           setStatus("saved", "Ready");
           renderNoteList();
+          deleteRunning = false;
           return;
         }
-        openNextAfterDelete(doomed);
+        return openNextAfterDelete(doomed, doomedVal !== "");
       };
       if (doomed) { idbDel(doomed).then(done).catch(done); }
       else done();
-    });
   });
 
   settings.addEventListener("click", function() {

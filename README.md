@@ -19,8 +19,8 @@ A fast, private, offline-ready notepad. No accounts, no tracking, no WYSIWYG clu
 
 - Instant autosave with a visible status (`Saving...` / `Saved • 12:03` / error states)
 - Multiple notes with search (title + content), sort (last edited / A-Z), pins, snippets and edit dates
-- Delete with click-to-undo (status bar) instead of instant permanent loss
-- Markdown preview: headings, **bold**, *italic*, `code`, fenced code blocks, checklists, quotes
+- Delete moves straight to Trash with click-to-undo (status bar), Shift-click deletes permanently with confirm
+- Markdown preview: headings, **bold**, *italic*, `code`, fenced code blocks, checklists, quotes, ordered lists, strikethrough
 - One-click `.txt` download, full JSON export, JSON file import, drag-and-drop import
 - Copy-to-clipboard and print stylesheet
 - Keyboard shortcuts: `Ctrl+S` save, `Ctrl+N` new note, `Ctrl+K` search, `Tab` indent
@@ -57,7 +57,6 @@ textcove/
 ├── sw.js               # Service worker (cache name stamped by npm run build)
 ├── manifest.webmanifest# PWA manifest with icons and app shortcuts
 ├── assets/             # Icons, screenshots, webfont
-├── serve-local.mjs     # Dev server with live reload (older variant)
 ├── robots.txt
 ├── sitemap.xml
 ├── CHANGELOG.md        # release history, newest first

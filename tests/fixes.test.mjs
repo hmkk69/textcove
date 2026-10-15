@@ -101,16 +101,6 @@ describe("menus and theme", () => {
   });
 });
 
-describe("renamed page", () => {
-  it("explains the rename and links home", () => {
-    const renamed = readFileSync("renamed.html", "utf8");
-    assert.ok(renamed.includes("TextCove"), "missing new name");
-    assert.ok(renamed.includes("SimpleJot"), "must mention the old name");
-    assert.ok(renamed.includes('href="./"'), "missing back-to-home link");
-    assert.ok(renamed.includes('src="boot.js"'), "must load the boot script for theme");
-  });
-});
-
 describe("oversized note guard", () => {
   it("never loads a huge note into the editor", () => {
     assert.ok(app.includes("loadSafeLimit"), "missing load size cap");

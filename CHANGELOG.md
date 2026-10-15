@@ -3,6 +3,20 @@
 All notable changes to TextCove are documented here, newest first.
 Dates follow the project commit history.
 
+## 2026-10-15
+
+- Reliability: notes list cache invalidates on save/delete, reserved names blocked, control chars stripped.
+- Markdown: ordered lists, strikethrough and hr, ordered and bullet lists no longer mix.
+- UX/a11y: skip link, menu aria-controls, OS theme changes apply when no manual theme is stored.
+- PWA/perf: font preload, referrer policy, maskable icon uses any maskable, build hash covers manifest plus icons and font.
+- Housekeeping: check covers boot.js, CI verifies fresh sw.js stamp, README points to scripts server only.
+- UX: delete moves straight to Trash, Shift-click asks then deletes permanently.
+- Reliability: delete is locked while running, empty notes skip Trash, single empty note cannot spam Trash.
+- UX: rename conflict offers the next free name like "name (1)" instead of only blocking.
+- UX: deleting an empty note explains it is empty instead of silently doing nothing; Shift-click still removes it permanently.
+- UX: header logo no longer overlaps the brand text and keeps one icon gray in both themes.
+- Housekeeping: removed `renamed.html` and its cache, build and test references.
+
 ## 2026-10-10
 
 - UX: footer status is plain text (green while saving or saved, red on error), install notice removed.

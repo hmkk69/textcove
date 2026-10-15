@@ -7,7 +7,7 @@
     "build": "node scripts/build.mjs",
     "dev": "node scripts/serve-local.mjs",
     "test": "node --test tests/app.test.mjs tests/pwa.test.mjs tests/fixes.test.mjs",
-    "check": "node --check app.js && node --check sw.js && node --check scripts/build.mjs"
+    "check": "node --check app.js && node --check boot.js && node --check sw.js && node --check scripts/build.mjs"
   },
   "license": "SEE LICENSE IN LICENSE"
 }
