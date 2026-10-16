@@ -31,6 +31,7 @@ document.addEventListener("DOMContentLoaded", function() {
   const fs = document.getElementById("fs");
   const lh = document.getElementById("lh");
   const lw = document.getElementById("lw");
+  const fontPick = document.getElementById("fontPick");
   const theme = document.getElementById("theme");
   const themeIcon = document.getElementById("themeIcon");
   const info = document.getElementById("info");
@@ -366,7 +367,7 @@ document.addEventListener("DOMContentLoaded", function() {
   const legacyNotesPrefix = "SimpleJot-note:";
   const legacyRecoveryPrefix = "SimpleJot-recovery:";
   const legacyIdbName = "SimpleJot";
-  const brandSingleKeys = ["pins", "meta", "trash-v1", "lastBackup", "current", "settings", "settings-fs", "settings-lh", "settings-lw", "sort", "theme", "seen"];
+  const brandSingleKeys = ["pins", "meta", "trash-v1", "lastBackup", "current", "settings", "settings-fs", "settings-lh", "settings-lw", "settings-font", "sort", "theme", "seen"];
   function migrateBrandKeys() {
     try {
       brandSingleKeys.forEach(function(suffix) {
@@ -1028,10 +1029,13 @@ document.addEventListener("DOMContentLoaded", function() {
     };
     collect().then(function(text) {
       if (text === "") {
-        deleteRunning = false;
-        showAlert("This note is empty. Write something first, there is nothing to move to Trash. To remove it anyway, Shift-click delete.");
-        renderNoteList();
-        return null;
+        if (getNoteNames().length <= 1) {
+          deleteRunning = false;
+          showAlert("This note is empty. Write something first, there is nothing to move to Trash. To remove it anyway, Shift-click delete.");
+          renderNoteList();
+          return null;
+        }
+        return false;
       }
       pushTrash({ name: name, value: text, pin: pins.indexOf(name) !== -1, updated: meta[name] || 0 });
       return true;
@@ -1509,25 +1513,57 @@ document.addEventListener("DOMContentLoaded", function() {
     });
   }
 
+  const editorFonts = {
+    ibm: "\"IBM Plex Mono\", \"Roboto Mono\", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
+    sysMono: "ui-monospace, SFMono-Regular, Menlo, Consolas, \"Liberation Mono\", monospace",
+    consolas: "Consolas, Menlo, Monaco, \"Courier New\", monospace",
+    sysSans: "system-ui, -apple-system, \"Segoe UI\", Roboto, \"Helvetica Neue\", Arial, sans-serif",
+    serif: "Georgia, \"Times New Roman\", Times, serif"
+  };
+
+  function currentFontId() {
+    const stored = safeGet("TextCove-settings-font");
+    if (stored && editorFonts[stored]) return stored;
+    return "ibm";
+  }
+
+  function fontStackFor(id) {
+    if (id && editorFonts[id]) return editorFonts[id];
+    return editorFonts.ibm;
+  }
+
+  function applyFontFamily() {
+    const stack = fontStackFor(currentFontId());
+    content.style.fontFamily = stack;
+    preview.style.fontFamily = stack;
+    if (fontPick) fontPick.value = currentFontId();
+  }
+
   function textSettings() {
     const fsValue = fs.value;
     const lhValue = lh.value;
     const lwValue = String(clampLineWidth(lw.value));
+    const fontValue = fontPick && editorFonts[fontPick.value] ? fontPick.value : currentFontId();
     const settingValues = "font-size:" + fsValue + "em;line-height:" + lhValue + ";padding-left:" + lwValue + "em;padding-right:" + lwValue + "em;";
     content.style.fontSize = fsValue + "em";
     content.style.lineHeight = String(lhValue);
     content.style.paddingLeft = lwValue + "em";
     content.style.paddingRight = lwValue + "em";
+    content.style.fontFamily = fontStackFor(fontValue);
     if (previewOpen) {
       preview.style.fontSize = fsValue + "em";
       preview.style.lineHeight = String(lhValue);
       preview.style.paddingLeft = lwValue + "em";
       preview.style.paddingRight = lwValue + "em";
+      preview.style.fontFamily = fontStackFor(fontValue);
+    } else {
+      preview.style.fontFamily = fontStackFor(fontValue);
     }
     safeSet("TextCove-settings", settingValues);
     safeSet("TextCove-settings-fs", fsValue);
     safeSet("TextCove-settings-lh", lhValue);
     safeSet("TextCove-settings-lw", lwValue);
+    safeSet("TextCove-settings-font", fontValue);
   }
 
   function applyStoredSettings() {
@@ -1537,6 +1573,8 @@ document.addEventListener("DOMContentLoaded", function() {
     if (lhv) lh.value = lhv;
     const lwv = safeGet("TextCove-settings-lw");
     if (lwv) lw.value = lwv;
+    if (fontPick) fontPick.value = currentFontId();
+    applyFontFamily();
     const stored = safeGet("TextCove-settings");
     if (stored) {
       content.style.fontSize = fs.value + "em";
@@ -1554,7 +1592,8 @@ document.addEventListener("DOMContentLoaded", function() {
     return {
       fs: fs.defaultValue || "1",
       lh: lh.defaultValue || "1.9",
-      lw: lw.defaultValue || "10"
+      lw: lw.defaultValue || "10",
+      font: "ibm"
     };
   }
 
@@ -1562,7 +1601,9 @@ document.addEventListener("DOMContentLoaded", function() {
     const d = defaultTextSettings();
     return String(fs.value) === String(d.fs) &&
       String(lh.value) === String(d.lh) &&
-      String(clampLineWidth(lw.value)) === String(clampLineWidth(d.lw));
+      String(clampLineWidth(lw.value)) === String(clampLineWidth(d.lw)) &&
+      currentFontId() === d.font &&
+      (!fontPick || String(fontPick.value) === String(d.font));
   }
 
   function resetTextSettings() {
@@ -1574,6 +1615,7 @@ document.addEventListener("DOMContentLoaded", function() {
     fs.value = d.fs;
     lh.value = d.lh;
     lw.value = d.lw;
+    if (fontPick) fontPick.value = d.font;
     textSettings();
     showAlert("Text settings have been reset to defaults.");
   }
@@ -1912,7 +1954,7 @@ document.addEventListener("DOMContentLoaded", function() {
       deleteNotePermanent(currentNote);
       return;
     }
-    if (content.value === "") {
+    if (content.value === "" && getNoteNames().length <= 1) {
       showAlert("This note is empty. Write something first, there is nothing to delete. To remove it anyway, Shift-click delete.");
       return;
     }
@@ -1984,6 +2026,15 @@ document.addEventListener("DOMContentLoaded", function() {
     content.style.paddingRight = val + "em";
     textSettings();
   });
+
+  if (fontPick) {
+    fontPick.addEventListener("change", function() {
+      const stack = fontStackFor(fontPick.value);
+      content.style.fontFamily = stack;
+      preview.style.fontFamily = stack;
+      textSettings();
+    });
+  }
 
   theme.addEventListener("click", function() {
     safeSet("TextCove-theme", currentThemeMode() === "night" ? "light" : "night");

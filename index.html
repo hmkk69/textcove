@@ -70,6 +70,16 @@
 					<input type="range" min="1" max="20" value="10" id="lw" step="1" title="Line width" aria-label="Line width">
 				</li>
 				<li class="settings-menu__item">
+					<label class="visually-hidden" for="fontPick">Editor font</label>
+					<select id="fontPick" title="Editor font" aria-label="Editor font">
+						<option value="ibm">IBM Plex Mono (Recommended)</option>
+						<option value="sysMono">System Mono</option>
+						<option value="consolas">Consolas / Menlo</option>
+						<option value="sysSans">System Sans</option>
+						<option value="serif">Georgia Serif</option>
+					</select>
+				</li>
+				<li class="settings-menu__item">
 					<button id="theme" title="Toggle theme" aria-label="Toggle dark theme"><svg aria-hidden="true"><use id="themeIcon" href="#icon-moon" xlink:href="#icon-moon"></use></svg></button>
 				</li>
 				<li class="settings-menu__item">

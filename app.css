@@ -960,6 +960,23 @@ header nav {
   border-color: #4a5261;
 }
 
+#fontPick {
+  flex: 1;
+  min-width: 0;
+  margin-left: 1rem;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: .4em;
+  background: inherit;
+  color: inherit;
+  font-family: inherit;
+  font-size: .9em;
+}
+
+.night #fontPick {
+  border-color: #4a5261;
+}
+
 .notes-empty {
   padding: 1em 0;
   text-align: center;
