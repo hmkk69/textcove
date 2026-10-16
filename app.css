@@ -653,9 +653,8 @@ footer {
 }
 
 .logo {
-  position: relative;
-  left: 49px;
-  margin-right: 6px;
+  margin-right: 8px;
+  flex: none;
 }
 
 .offline-tip {
@@ -682,6 +681,9 @@ footer {
   color: #9aa3b2;
 }
 body.is-offline .net-status {
+  display: none;
+}
+body.is-offline .offline-tip {
   display: none;
 }
 body.is-offline .store-status {
@@ -1275,5 +1277,73 @@ html.night #theme:hover svg {
     height: auto;
     overflow: visible;
   }
+}
+
+.changelog {
+  max-width: 72ch;
+  margin: 4em auto 5em;
+  padding: 0 1.25em;
+  line-height: 1.7;
+}
+
+.changelog h1 {
+  font-size: 1.5em;
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  text-align: center;
+  margin-bottom: .5em;
+}
+
+.changelog .lede {
+  text-align: center;
+  color: #767676;
+  font-size: .875em;
+  margin-bottom: 2em;
+}
+
+.night .changelog .lede {
+  color: #9aa3b2;
+}
+
+.changelog h2 {
+  font-size: 1.1em;
+  font-weight: 700;
+  margin: 1.75em 0 .5em;
+  padding-top: 1em;
+  border-top: 1px solid #eee;
+}
+
+.night .changelog h2 {
+  border-top-color: #353c48;
+}
+
+.changelog ul {
+  list-style: disc;
+  padding-left: 1.5em;
+  margin-bottom: 1em;
+}
+
+.changelog li {
+  margin-bottom: .3em;
+  font-size: .9375em;
+}
+
+.changelog code {
+  font-family: inherit;
+  background: rgba(0, 0, 0, .06);
+  border-radius: 4px;
+  padding: .1em .3em;
+}
+
+.night .changelog code {
+  background: rgba(255, 255, 255, .08);
+}
+
+.changelog-back {
+  display: block;
+  text-align: center;
+  margin-top: 2.5em;
+  font-size: .875em;
 }
 

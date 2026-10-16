@@ -7,7 +7,7 @@ Zero-dependency vanilla PWA: `index.html` + `app.css` + `app.js` + `boot.js` + `
 - `npm run dev` → serves repo root at `http://localhost:6969` via `scripts/serve-local.mjs`. Must use HTTP, not `file://` (service worker and PWA install break on `file://`).
 - `npm test` → `node --test tests/app.test.mjs tests/pwa.test.mjs tests/fixes.test.mjs`. Static source-assertion suites (read files, check strings); no browser/DOM runner.
 - `npm run check` → `node --check` on `app.js`, `boot.js`, `sw.js`, `scripts/build.mjs`. Run after any JS edit.
-- `npm run build` → `node scripts/build.mjs` hashes `index.html` + `404.html` + `app.css` + `app.js` + `boot.js` + `manifest.webmanifest` + icons + font, and rewrites `const cacheName = "textcove-<8hex>"` in `sw.js` in place. Run after touching any hashed file, before commit/deploy, or CI (`git diff --exit-code sw.js`) fails.
+- `npm run build` → `node scripts/build.mjs` hashes `index.html` + `404.html` + `changelog.html` + `app.css` + `app.js` + `boot.js` + `manifest.webmanifest` + icons + font, and rewrites `const cacheName = "textcove-<8hex>"` in `sw.js` in place. Run after touching any hashed file, before commit/deploy, or CI (`git diff --exit-code sw.js`) fails.
 
 ## Architecture / gotchas
 
@@ -20,6 +20,7 @@ Zero-dependency vanilla PWA: `index.html` + `app.css` + `app.js` + `boot.js` + `
 - PWA: `manifest.webmanifest` uses `start_url`/`id` `"./"`, maskable icon purpose `"any maskable"`, plus screenshots/categories/shortcuts. `sw.js` caches only `response.ok`, uses `Promise.allSettled` on install, keeps single `shellKey` for app shell, serves `./404.html` on 404 and guards non-HTML fallbacks with `event.request.destination`.
 - Dev servers: canonical is `scripts/serve-local.mjs` (`Cache-Control: no-store`, SSE on `/__textcove_reload`). Root `serve-local.mjs` is legacy, untracked (see `.gitignore`), do not use or commit it. `index.html` must keep `src="boot.js"`, social tags (`og:title`, `twitter:card`, `rel="canonical"`), labels (`aria-label="Save note as text file"`, `for="fs"`, `<dialog>`, `aria-live="polite"`), `#logo`, `#icon-sun`/`#icon-moon`/`#themeIcon`, offline tip text, font preload and `aria-controls` on menus.
 - Line endings: `.gitattributes` pins `eol=lf` and `scripts/build.mjs` strips `\r\n` before hashing, so the `sw.js` stamp is identical on Windows and CI. Never hash raw bytes without normalizing, or CI `git diff --exit-code sw.js` fails.
+- Changelog: keep `CHANGELOG.md` and `changelog.html` in sync on every release entry; the info dialog links to `changelog.html`, never to the `.md`. `CHANGELOG.md` stays in git but is hidden on the live site via `.vercelignore` so `/CHANGELOG.md` 404s on Vercel while GitHub still shows it.
 
 # Commit message
 - When I say: "Write commit message and push", I create a commit message with complete type and description but not too long, then push it for me. If it's just "Write a commit message", then just write the commit message, not push.

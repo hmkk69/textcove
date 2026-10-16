@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { readFileSync, writeFileSync } from "node:fs";
 
-const sources = ["index.html", "404.html", "app.css", "app.js", "boot.js", "manifest.webmanifest", "assets/icon.svg", "assets/icon-192.png", "assets/icon-512.png", "assets/icon-maskable-512.png", "assets/IBMPlexMono-Regular.woff2"];
+const sources = ["index.html", "404.html", "changelog.html", "app.css", "app.js", "boot.js", "manifest.webmanifest", "assets/icon.svg", "assets/icon-192.png", "assets/icon-512.png", "assets/icon-maskable-512.png", "assets/IBMPlexMono-Regular.woff2"];
 const hash = createHash("sha256");
 for (const file of sources) {
   const raw = readFileSync(file).toString("binary");

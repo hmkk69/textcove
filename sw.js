@@ -1,9 +1,10 @@
 "use strict";
-const cacheName = "textcove-05669641";
+const cacheName = "textcove-36d07e59";
 const assets = [
   "./",
   "./index.html",
   "./404.html",
+  "./changelog.html",
   "./app.css",
   "./app.js",
   "./boot.js",
@@ -56,12 +57,14 @@ self.addEventListener("fetch", function(event) {
     return;
   }
   if (event.request.mode === "navigate") {
+    const navPath = new URL(event.request.url).pathname;
+    const navKey = navPath.slice(-14) === "changelog.html" ? "./changelog.html" : "./index.html";
     event.respondWith(
       fetch(event.request).then(function(response) {
         if (response && response.ok) {
           const copy = response.clone();
           caches.open(cacheName).then(function(cache) {
-            cache.put("./index.html", copy);
+            cache.put(navKey, copy);
           }).catch(function() {});
           return response;
         }
@@ -72,7 +75,7 @@ self.addEventListener("fetch", function(event) {
         }
         return response;
       }).catch(function() {
-        return caches.match("./index.html", { ignoreSearch: true });
+        return caches.match(navKey, { ignoreSearch: true });
       })
     );
     return;

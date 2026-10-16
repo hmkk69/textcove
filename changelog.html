@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Changelog - TextCove</title>
+	<meta name="description" content="All notable changes to TextCove, newest first.">
+	<meta name="author" content="hmkk69">
+	<meta name="robots" content="index, follow">
+	<link rel="canonical" href="https://tc.hmkkk.qzz.io/changelog.html">
+	<meta property="og:type" content="website">
+	<meta property="og:site_name" content="TextCove">
+	<meta property="og:title" content="Changelog - TextCove">
+	<meta property="og:description" content="All notable changes to TextCove, newest first.">
+	<meta property="og:url" content="https://tc.hmkkk.qzz.io/changelog.html">
+	<meta property="og:image" content="https://tc.hmkkk.qzz.io/assets/screenshot-wide.png">
+	<meta name="twitter:card" content="summary_large_image">
+	<meta name="twitter:title" content="Changelog - TextCove">
+	<meta name="twitter:description" content="All notable changes to TextCove, newest first.">
+	<meta name="twitter:image" content="https://tc.hmkkk.qzz.io/assets/screenshot-wide.png">
+	<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+	<meta name="theme-color" content="#15181d" media="(prefers-color-scheme: dark)">
+	<meta name="color-scheme" content="light dark">
+	<link rel="manifest" href="manifest.webmanifest">
+	<link rel="icon" type="image/svg+xml" href="assets/icon.svg">
+	<link rel="icon" type="image/png" sizes="192x192" href="assets/icon-192.png">
+	<link rel="icon" type="image/png" sizes="512x512" href="assets/icon-512.png">
+	<link rel="apple-touch-icon" href="assets/icon-192.png">
+	<link href="app.css" rel="stylesheet">
+</head>
+<body>
+<svg style="position: absolute; width: 0; height: 0; overflow: hidden;" aria-hidden="true" xmlns:xlink="http://www.w3.org/1999/xlink"><defs><symbol id="logo" viewBox="0 0 512 512"><title>TextCove logo</title><rect x="32" y="32" width="448" height="448" rx="64" fill="none" stroke="currentColor" stroke-width="32"/><rect x="112" y="160" width="288" height="24" rx="12" fill="currentColor"/><rect x="112" y="232" width="288" height="24" rx="12" fill="currentColor"/><rect x="112" y="304" width="288" height="24" rx="12" fill="currentColor"/><circle cx="112" cy="376" r="14"/><rect x="142" y="364" width="228" height="24" rx="12" fill="currentColor"/></symbol></defs></svg>
+<header role="banner">
+	<nav aria-label="Main">
+		<a href="./" style="font-weight: bold;"><svg class="logo" aria-hidden="true"><use xlink:href="#logo"></use></svg>TextCove</a>
+	</nav>
+</header>
+
+<main class="changelog">
+	<h1>Changelog</h1>
+	<p class="lede">All notable changes to TextCove are documented here, newest first. Dates follow the project commit history.</p>
+
+	<h2>2026-10-16</h2>
+	<ul>
+		<li>UX: editor font picker in settings with IBM Plex Mono (Recommended), System Mono, Consolas/Menlo, System Sans and Georgia Serif; applies to editor plus preview, saved per device and covered by reset.</li>
+		<li>UX: empty notes delete normally when more than one note exists; the "empty note" notice plus Shift-click hint only shows for the last remaining note.</li>
+		<li>UX: added a user-friendly Changelog page, info dialog links to it instead of the raw markdown; <code>CHANGELOG.md</code> stays in git but stays hidden on the live Vercel site.</li>
+	</ul>
+
+	<h2>2026-10-15</h2>
+	<ul>
+		<li>Reliability: notes list cache invalidates on save/delete, reserved names blocked, control chars stripped.</li>
+		<li>Markdown: ordered lists, strikethrough and hr, ordered and bullet lists no longer mix.</li>
+		<li>UX/a11y: skip link, menu aria-controls, OS theme changes apply when no manual theme is stored.</li>
+		<li>PWA/perf: font preload, referrer policy, maskable icon uses any maskable, build hash covers manifest plus icons and font.</li>
+		<li>Housekeeping: check covers boot.js, CI verifies fresh sw.js stamp, README points to scripts server only.</li>
+		<li>UX: delete moves straight to Trash, Shift-click asks then deletes permanently.</li>
+		<li>Reliability: delete is locked while running, empty notes skip Trash, single empty note cannot spam Trash.</li>
+		<li>UX: rename conflict offers the next free name like "name (1)" instead of only blocking.</li>
+		<li>UX: deleting an empty note explains it is empty instead of silently doing nothing; Shift-click still removes it permanently.</li>
+		<li>UX: header logo no longer overlaps the brand text and keeps one icon gray in both themes.</li>
+		<li>Housekeeping: removed <code>renamed.html</code> and its cache, build and test references.</li>
+		<li>UX: backup with no content explains there is nothing to back up yet instead of downloading an empty file.</li>
+		<li>Housekeeping: pin LF line endings and normalize the build hash input so the <code>sw.js</code> stamp matches on Windows and CI.</li>
+	</ul>
+
+	<h2>2026-10-10</h2>
+	<ul>
+		<li>UX: footer status is plain text (green while saving or saved, red on error), install notice removed.</li>
+		<li>Perf: debounced search, 2s list cache, content search capped at 50k chars per note.</li>
+		<li>Reliability: boot reconciles crash-recovery copies, note names reserved synchronously, large backup asks before export.</li>
+		<li>PWA: worker serves 404.html on 404s, empty 404 for images/fonts offline, single cache key for the app shell, update poll relaxed to 15 minutes.</li>
+		<li>UX/a11y: first-run theme follows the OS, centralized aria-expanded sync, dialog focus restore plus Tab trap, print shows the note title, JSON-LD metadata.</li>
+		<li>Markdown: code spans shielded from bold/italic/link formatting.</li>
+		<li>Housekeeping: legacy placeholder selectors and duplicate CSS removed, CI runs test plus syntax check.</li>
+	</ul>
+
+	<h2>2026-10-09</h2>
+	<ul>
+		<li>Desktop PWA install: open <code>.txt</code> files straight into the app (<code>file_handlers</code>), receive shared text/links (<code>share_target</code>), handle <code>web+textcove</code> links (<code>protocol_handlers</code>) and reuse the open window (<code>launch_handler</code>).</li>
+		<li>Subtle "App available" notice in the footer instead of a button. It triggers the native install prompt when the browser offers one, otherwise it explains how to install manually. The notice hides itself once the app runs installed.</li>
+		<li>Shared text and launched files open as new notes.</li>
+	</ul>
+
+	<h2>2026-10-07</h2>
+	<ul>
+		<li>Ownership transferred from 2nul to hmkk69; repo links and site domain updated (<code>tc.hmkkk.qzz.io</code>).</li>
+	</ul>
+
+	<h2>2026-10-04</h2>
+	<ul>
+		<li><strong>Breaking:</strong> renamed SimpleJot to TextCove across UI, manifest, PWA cache, docs and links.</li>
+		<li>Existing notes carry over: IndexedDB and localStorage keys migrate from <code>SimpleJot-*</code> to <code>TextCove-*</code>.</li>
+		<li>Dismissible rename banner plus a <code>renamed.html</code> landing page.</li>
+		<li>Oversized-note guard: backup-before-clear flow so a huge note can no longer freeze the page.</li>
+	</ul>
+
+	<h2>2026-10-03</h2>
+	<ul>
+		<li>Storage: race-safe note switching, persistent trash with 30-day expiry and click-to-undo, one-tap backup with free-space status.</li>
+		<li>UX: shared ease-out motion curve, deep-slate dark mode with light default, footer keeps only the offline tip.</li>
+		<li>Notes list loads in a single IndexedDB pass and searches titles plus content; file names sanitized, import size/count capped.</li>
+		<li>Hardened service worker caching and manifest <code>start_url</code>.</li>
+	</ul>
+
+	<h2>2026-09-20</h2>
+	<ul>
+		<li>Fixed service worker auto-update: online clients check for a newer worker on load and reconnect, then swap to it.</li>
+	</ul>
+
+	<h2>2026-09-19</h2>
+	<ul>
+		<li>Rewrote the note engine: dropped FileSaver/Smoke/Countable for native download, native <code>&lt;dialog&gt;</code> and a hand-written counter.</li>
+		<li>Added search, sort, pins, markdown preview, keyboard shortcuts and JSON import/export.</li>
+		<li>localStorage fallback when IndexedDB is blocked; installable offline-first PWA with build-stamped service worker cache.</li>
+		<li>License changed to non-commercial attribution (see <code>LICENSE</code>).</li>
+	</ul>
+
+	<h2>2026-09-16</h2>
+	<ul>
+		<li>Migrated notes from localStorage to IndexedDB with realtime autosave.</li>
+		<li>Offline use via service worker cache.</li>
+		<li>New notes default to "New note" so empty titles can no longer lose data.</li>
+	</ul>
+
+	<h2>2026-09-12</h2>
+	<ul>
+		<li>Multi-note management: notes panel, per-note autosave, rename via title field, per-note delete, last-open note restored; legacy single-note data auto-migrated.</li>
+		<li>Note naming warning on startup.</li>
+		<li>Initial commit.</li>
+	</ul>
+
+	<a class="changelog-back" href="./">Back to notes</a>
+</main>
+
+<script src="boot.js" defer></script>
+
+</body>
+</html>
