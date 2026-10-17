@@ -308,6 +308,11 @@ document.addEventListener("DOMContentLoaded", function() {
       return "";
     }
   }
+  function backupStamp() {
+    const d = new Date();
+    const pad = function(n) { return String(n).padStart(2, "0"); };
+    return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()) + "-" + pad(d.getHours()) + pad(d.getMinutes()) + pad(d.getSeconds());
+  }
 
   function setStatus(state, text) {
     saveStatus.dataset.state = state;
@@ -924,13 +929,14 @@ document.addEventListener("DOMContentLoaded", function() {
     currentNote = name; shownNote = ""; dirty = false;
     safeSet("TextCove-current", name);
     title.value = name;
-    if (previewOpen) togglePreview(false);
+    if (previewOpen && !isSplitView()) togglePreview(false);
     const rec = safeGet(recoveryPrefix + name);
     const load = function() {
       if (rec !== null && rec !== undefined) {
         if (String(rec).length > loadSafeLimit) { handleOversizedNote(name, String(rec)); return Promise.resolve(name); }
         content.value = rec; shownNote = name;
         updateCounters();
+        if (!preview.hidden) refreshPreview();
         idbPut(name, rec).then(function() { clearRecovery(name); }).catch(function() {});
         markSaved();
         renderNoteList();
@@ -942,11 +948,13 @@ document.addEventListener("DOMContentLoaded", function() {
         if (text.length > loadSafeLimit) { handleOversizedNote(name, text); return; }
         content.value = text; shownNote = name;
         updateCounters();
+        if (!preview.hidden) refreshPreview();
         renderNoteList();
       }).catch(function() {
         if (mySeq !== openSeq || currentNote !== name) return;
         content.value = ""; shownNote = name;
         updateCounters();
+        if (!preview.hidden) refreshPreview();
       });
     };
     return sp.then(load).catch(load);
@@ -1112,7 +1120,7 @@ document.addEventListener("DOMContentLoaded", function() {
         remove.className = "tag-remove";
         remove.setAttribute("data-tag", tag);
         remove.setAttribute("aria-label", "Delete tag " + tag);
-        remove.title = "Delete this tag from every note";
+        remove.dataset.tooltip = "Delete this tag from every note";
         remove.textContent = "\u00d7";
         remove.addEventListener("click", function() {
           deleteTagEverywhere(this.getAttribute("data-tag"));
@@ -1291,7 +1299,7 @@ document.addEventListener("DOMContentLoaded", function() {
         });
         const pinBtn = document.createElement("button");
         pinBtn.className = "note-pin" + (pins.indexOf(name) !== -1 ? " is-pinned" : "");
-        pinBtn.title = pins.indexOf(name) !== -1 ? "Unpin note" : "Pin note";
+        pinBtn.dataset.tooltip = pins.indexOf(name) !== -1 ? "Unpin note" : "Pin note";
         pinBtn.setAttribute("aria-label", (pins.indexOf(name) !== -1 ? "Unpin note " : "Pin note ") + name);
         pinBtn.setAttribute("data-note", name);
         pinBtn.textContent = pins.indexOf(name) !== -1 ? "\u2605" : "\u2606";
@@ -1305,7 +1313,7 @@ document.addEventListener("DOMContentLoaded", function() {
         });
         const delBtn = document.createElement("button");
         delBtn.className = "note-delete";
-        delBtn.title = "Move to Trash, Shift-click to delete permanently";
+        delBtn.dataset.tooltip = "Move to Trash, Shift-click to delete permanently";
         delBtn.setAttribute("aria-label", "Delete note " + name);
         delBtn.setAttribute("data-note", name);
         delBtn.textContent = "\u00d7";
@@ -1573,7 +1581,29 @@ document.addEventListener("DOMContentLoaded", function() {
     }
   }
 
+  function isSplitView() {
+    try { return !!(window.matchMedia && window.matchMedia("(min-width: 48em)").matches); } catch (err) { return false; }
+  }
+  function applyLayout() {
+    if (isSplitView()) {
+      content.style.display = "";
+    } else if (previewOpen) {
+      content.style.display = "none";
+    } else {
+      content.style.display = "";
+    }
+  }
   function togglePreview(force) {
+    if (isSplitView()) {
+      const desired = typeof force === "boolean" ? force : preview.hidden;
+      preview.hidden = !desired;
+      previewOpen = !preview.hidden;
+      content.style.display = "";
+      previewBtn.classList.toggle("preview-btn--active", previewOpen);
+      previewBtn.setAttribute("aria-pressed", previewOpen ? "true" : "false");
+      if (previewOpen) refreshPreview();
+      return;
+    }
     previewOpen = typeof force === "boolean" ? force : !previewOpen;
     preview.hidden = !previewOpen;
     content.style.display = previewOpen ? "none" : "";
@@ -1729,7 +1759,7 @@ document.addEventListener("DOMContentLoaded", function() {
     }).then(function(notes) {
       if (!notes) return;
       const exportObj = { version: noteExportVersion, exportedAt: new Date().toISOString(), notes: notes, tags: allTags, noteTags: noteTags };
-      downloadBlob(new Blob([JSON.stringify(exportObj, null, 2)], { type: "application/json;charset=utf-8" }), "textcove-export-" + Date.now() + ".json");
+      downloadBlob(new Blob([JSON.stringify(exportObj, null, 2)], { type: "application/json;charset=utf-8" }), "textcove-backup-" + backupStamp() + ".json");
       markBackup(); opfsBackup(notes); refreshStoreStatus();
     }).catch(function(err) {
       if (isQuotaError(err)) showAlert("Storage is full, so the export could not be prepared.");
@@ -1743,7 +1773,7 @@ document.addEventListener("DOMContentLoaded", function() {
     safeSet("TextCove-current", autoName);
     title.value = autoName;
     content.value = "";
-    if (previewOpen) togglePreview(false);
+    if (previewOpen && !isSplitView()) togglePreview(false);
     updateCounters();
     setStatus("ready", "Ready");
     return idbPut(autoName, "").then(function() {
@@ -1979,7 +2009,7 @@ document.addEventListener("DOMContentLoaded", function() {
     const night = currentThemeMode() === "night";
     rootEl.classList.toggle("night", night);
     if (theme) {
-      theme.title = night ? "Switch to light theme" : "Switch to dark theme";
+      theme.dataset.tooltip = night ? "Switch to light theme" : "Switch to dark theme";
       theme.setAttribute("aria-label", night ? "Switch to light theme" : "Switch to dark theme");
     }
     if (themeIcon) {
@@ -2057,12 +2087,15 @@ document.addEventListener("DOMContentLoaded", function() {
 
     document.addEventListener("keydown", function(e) {
       if (e.key === "Escape") {
+        const notesWasOpen = notesMenu.classList.contains("notes-menu--open");
+        const settingsWasOpen = setMenu.classList.contains("settings-menu--open");
         setMenu.classList.remove("settings-menu--open");
         settings.classList.remove("settings-btn--active");
         notesMenu.classList.remove("notes-menu--open");
         notesBtn.classList.remove("notes-btn--active");
         notesBtn.setAttribute("aria-expanded", "false");
         settings.setAttribute("aria-expanded", "false");
+        try { if (notesWasOpen && notesBtn) notesBtn.focus(); else if (settingsWasOpen && settings) settings.focus(); } catch (err) {}
         return;
       }
       const mod = e.ctrlKey || e.metaKey;
@@ -2321,7 +2354,7 @@ document.addEventListener("DOMContentLoaded", function() {
           currentNote = ""; shownNote = ""; dirty = false;
           title.value = "";
           content.value = "";
-          if (previewOpen) togglePreview(false);
+          if (previewOpen && !isSplitView()) togglePreview(false);
           updateCounters();
           setStatus("saved", "Ready");
           renderNoteList();
@@ -2440,7 +2473,7 @@ document.addEventListener("DOMContentLoaded", function() {
   try { storeStatus.addEventListener("click", function() { exportData(); }); } catch (err) {}
   try { storeStatus.style.cursor = "pointer"; } catch (err) {}
   saveStatus.style.cursor = "pointer";
-  saveStatus.title = "Click to undo delete when available";
+  saveStatus.dataset.tooltip = "Click to undo delete when available";
   try { if (trashToggle) trashToggle.addEventListener("click", function() { renderTrash(); trashList.hidden = !trashList.hidden; }); } catch (err) {}
   try { if (trashEmpty) trashEmpty.addEventListener("click", function() { showConfirm("Empty trash forever?", { ok: "YES", cancel: "NO" }).then(function(yes) { if (yes) { setTrash([]); lastTrash = null; } }); }); } catch (err) {}
 
@@ -2536,6 +2569,176 @@ document.addEventListener("DOMContentLoaded", function() {
     else home.classList.remove("active");
   } catch (err) {}
 
+  // Custom tooltip (YouTube-style) for elements carrying title/data-tooltip.
+  const appTooltip = document.getElementById("appTooltip");
+  let tooltipTimer = null;
+  let tooltipTarget = null;
+  function positionTooltip(el) {
+    if (!appTooltip) return;
+    const rect = el.getBoundingClientRect();
+    const tw = appTooltip.offsetWidth;
+    const th = appTooltip.offsetHeight;
+    let left = rect.left + (rect.width - tw) / 2;
+    let top = rect.top - th - 8;
+    if (left < 8) left = 8;
+    if (left + tw > window.innerWidth - 8) left = window.innerWidth - tw - 8;
+    if (top < 8) top = rect.bottom + 8;
+    appTooltip.style.left = left + "px";
+    appTooltip.style.top = top + "px";
+  }
+  function showTooltipFor(el) {
+    if (!appTooltip || !el) return;
+    const text = el.getAttribute("data-tooltip") || el.getAttribute("title") || "";
+    if (!text) return;
+    tooltipTarget = el;
+    if (tooltipTimer) clearTimeout(tooltipTimer);
+    tooltipTimer = setTimeout(function() {
+      if (tooltipTarget !== el) return;
+      appTooltip.textContent = text;
+      appTooltip.removeAttribute("hidden");
+      void appTooltip.offsetWidth;
+      positionTooltip(el);
+      appTooltip.classList.add("is-visible");
+    }, 300);
+  }
+  function hideTooltipNow() {
+    tooltipTarget = null;
+    if (tooltipTimer) { clearTimeout(tooltipTimer); tooltipTimer = null; }
+    if (appTooltip) {
+      appTooltip.classList.remove("is-visible");
+      setTimeout(function() { if (appTooltip && !appTooltip.classList.contains("is-visible")) appTooltip.hidden = true; }, 120);
+    }
+  }
+  function bindTooltipTo(el) {
+    if (!el || el._tooltipBound) return;
+    const text = el.getAttribute("data-tooltip") || el.getAttribute("title");
+    if (!text) return;
+    if (el.getAttribute("title") && !el.getAttribute("data-tooltip")) {
+      el.setAttribute("data-tooltip", el.getAttribute("title"));
+      el.removeAttribute("title");
+    }
+    el._tooltipBound = true;
+  }
+  function bindTooltipTree(root) {
+    if (!root || !root.querySelectorAll) return;
+    const nodes = root.querySelectorAll("[title], [data-tooltip]");
+    nodes.forEach(bindTooltipTo);
+    const btns = root.querySelectorAll("button[aria-label], a[aria-label], [role='button'][aria-label]");
+    btns.forEach(function(b) {
+      if (b.getAttribute("data-tooltip")) return;
+      const label = b.getAttribute("aria-label");
+      if (label) {
+        b.setAttribute("data-tooltip", label);
+        bindTooltipTo(b);
+      }
+    });
+  }
+  function tooltipTargetFor(node) {
+    if (!node || !node.closest) return null;
+    return node.closest("[data-tooltip]");
+  }
+  document.addEventListener("mouseover", function(e) {
+    const t = tooltipTargetFor(e.target);
+    if (t) showTooltipFor(t);
+    else hideTooltipNow();
+  });
+  document.addEventListener("mouseout", function(e) {
+    const t = tooltipTargetFor(e.target);
+    const rt = tooltipTargetFor(e.relatedTarget);
+    if (rt !== tooltipTarget) hideTooltipNow();
+  });
+  document.addEventListener("focusin", function(e) {
+    const t = tooltipTargetFor(e.target);
+    if (t) showTooltipFor(t);
+  });
+  document.addEventListener("focusout", function(e) {
+    const rt = tooltipTargetFor(e.relatedTarget);
+    if (rt !== tooltipTarget) hideTooltipNow();
+  });
+
+  bindTooltipTree(document);
+  try {
+    const mo = new MutationObserver(function(muts) {
+      muts.forEach(function(m) {
+        m.addedNodes.forEach(function(n) {
+          if (n.nodeType === 1) bindTooltipTree(n);
+        });
+      });
+    });
+    mo.observe(document.body, { childList: true, subtree: true });
+  } catch (err) {}
+
+  const mdHint = document.getElementById("mdHint");
+  const mdHintTry = document.getElementById("mdHintTry");
+  const mdHintDismiss = document.getElementById("mdHintDismiss");
+  function looksLikeMarkdown(text) {
+    const t = (text || "").trim();
+    if (t.length < 8) return false;
+    return (
+      /^#{1,6}\s/m.test(t) ||
+      /```/.test(t) ||
+      /\*\*[^*]+\*\*/.test(t) ||
+      /~~[^~]+~~/.test(t) ||
+      /^\s*[-*+]\s/m.test(t) ||
+      /^\s*\d+\.\s/m.test(t) ||
+      /^>\s/m.test(t) ||
+      /\[[^\]]+\]\([^)]+\)/.test(t)
+    );
+  }
+  function setMdHintVisible(on) {
+    if (!mdHint) return;
+    mdHint.classList.toggle("is-visible", !!on);
+    mdHint.setAttribute("aria-hidden", on ? "false" : "true");
+  }
+  let mdHintTimer = null;
+  function updateMdHint() {
+    if (!mdHint) return;
+    const text = content.value || "";
+    if (previewOpen || !looksLikeMarkdown(text)) {
+      setMdHintVisible(false);
+      return;
+    }
+    setMdHintVisible(true);
+  }
+  if (content) {
+    content.addEventListener("input", function() {
+      const text = content.value || "";
+      if (!looksLikeMarkdown(text)) {
+        setMdHintVisible(false);
+        if (mdHintTimer) { clearTimeout(mdHintTimer); mdHintTimer = null; }
+        return;
+      }
+      if (mdHintTimer) clearTimeout(mdHintTimer);
+      mdHintTimer = setTimeout(updateMdHint, 600);
+    });
+  }
+  if (mdHintTry) {
+    mdHintTry.addEventListener("click", function() {
+      togglePreview(true);
+      setMdHintVisible(false);
+    });
+  }
+  function dismissMdHint() {
+    if (mdHintTimer) { clearTimeout(mdHintTimer); mdHintTimer = null; }
+    setMdHintVisible(false);
+  }
+  if (mdHintDismiss) {
+    mdHintDismiss.addEventListener("click", function(e) {
+      e.stopPropagation();
+      dismissMdHint();
+    });
+  }
+  if (mdHint) {
+    mdHint.addEventListener("click", function(e) {
+      if (e.target === mdHint || e.target.tagName === "SPAN") dismissMdHint();
+    });
+  }
+  // also re-evaluate when preview toggles
+  const _togglePreviewOrig = togglePreview;
+  // wrap not needed; updateMdHint called via input. Call once after load.
+  setTimeout(updateMdHint, 1000);
+
+  try { window.addEventListener("resize", function() { applyLayout(); if (previewOpen) refreshPreview(); }); } catch (err) {}
   applyTheme();
 
   updateCounters();

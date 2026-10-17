@@ -128,6 +128,9 @@
       reloadSource.onmessage = function(e) {
         if (e.data === "reload") window.location.reload();
       };
+      reloadSource.onerror = function() {
+        try { reloadSource.close(); } catch (err) {}
+      };
     }
   } catch (err) {}
 })();

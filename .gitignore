@@ -1,4 +1,5 @@
 node_modules/
 .DS_Store
-serve-local.mjs
 AGENTS.md
+.dev-server.lock
+/serve-local.mjs

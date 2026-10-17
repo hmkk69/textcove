@@ -805,6 +805,7 @@ header nav {
 
 .editor {
   height: 100%;
+  position: relative;
 }
 
 .print-title {
@@ -1560,3 +1561,117 @@ html.night #theme:hover svg {
   font-size: .875em;
 }
 
+
+
+.md-toolbar button:active {
+  transform: translateY(1px);
+}
+
+.app-tooltip {
+  position: fixed;
+  z-index: 10000;
+  padding: 6px 10px;
+  background: #222;
+  color: #fff;
+  font-size: 12px;
+  line-height: 1.3;
+  border-radius: 4px;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity .12s ease, transform .12s ease;
+  max-width: 240px;
+  white-space: normal;
+  word-wrap: break-word;
+  box-shadow: 0 2px 8px rgba(0,0,0,.25);
+}
+.app-tooltip.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+html.night .app-tooltip {
+  background: #000;
+}
+
+
+.md-hint {
+  position: absolute;
+  opacity: 0;
+  transform: translateY(10px) scale(0.8);
+  pointer-events: none;
+  transition: opacity .18s ease, transform .18s ease;
+  bottom: 1em;
+  right: 1em;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  gap: .5em;
+  padding: .5em .75em;
+  background: rgba(34,34,34,.92);
+  color: #fff;
+  font-size: .8rem;
+  line-height: 1.2;
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0,0,0,.25);
+}
+.md-hint.is-visible {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+}
+.md-hint button {
+  font-family: inherit;
+  font-size: .8rem;
+  padding: .2em .5em;
+  border: 1px solid rgba(255,255,255,.25);
+  background: rgba(255,255,255,.12);
+  color: #fff;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.md-hint button:hover {
+  background: rgba(255,255,255,.22);
+}
+.md-hint #mdHintDismiss {
+  border: none;
+  background: rgba(255,255,255,.15);
+  padding: .35em .6em;
+  font-size: 1.2rem;
+  line-height: 1;
+  cursor: pointer;
+  border-radius: 4px;
+  min-width: 2em;
+  min-height: 2em;
+}
+.md-hint #mdHintDismiss:hover {
+  background: rgba(255,255,255,.3);
+}
+html.night .md-hint {
+  background: rgba(0,0,0,.9);
+}
+
+
+@media (min-width: 48em) {
+  .editor {
+    display: flex;
+    flex-direction: row;
+    gap: 0;
+  }
+  .editor textarea {
+    flex: 1 1 50%;
+    height: 100%;
+  }
+  .editor .preview {
+    flex: 1 1 50%;
+    height: 100%;
+    border-left: 1px solid rgba(0,0,0,.12);
+    display: block;
+  }
+  .editor .preview[hidden] {
+    display: none;
+    flex: 0 0 0;
+  }
+}
+html.night .editor .preview {
+  border-left-color: rgba(255,255,255,.12);
+}
