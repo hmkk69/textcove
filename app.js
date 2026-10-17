@@ -24,6 +24,13 @@ document.addEventListener("DOMContentLoaded", function() {
   const setMenu = document.getElementById("setMenu");
   const notesBtn = document.getElementById("notes");
   const notesMenu = document.getElementById("notesMenu");
+  const tagInput = document.getElementById("tagInput");
+  const tagChips = document.getElementById("tagChips");
+  const tagSuggestions = document.getElementById("tagSuggestions");
+  const tagList = document.getElementById("tagList");
+  const tagMenuNote = document.getElementById("tagMenuNote");
+  const tagFilter = document.getElementById("tagFilter");
+  let suggestIndex = -1;
   const noteList = document.getElementById("noteList");
   const newNote = document.getElementById("newNote");
   const searchInput = document.getElementById("noteSearch");
@@ -337,6 +344,8 @@ document.addEventListener("DOMContentLoaded", function() {
   const defaultNoteBase = "New note";
   const pinKey = "TextCove-pins";
   const metaKey = "TextCove-meta";
+  const tagListKey = "TextCove-tagList";
+  const noteTagKey = "TextCove-tags";
   const trashKey = "TextCove-trash-v1";
   const backupKey = "TextCove-lastBackup";
   let currentNote = "";
@@ -354,6 +363,8 @@ document.addEventListener("DOMContentLoaded", function() {
   const maxFileSize = 5 * 1024 * 1024;
   const maxTextLen = 1000000;
   const maxImportNotes = 200;
+  const maxTags = 100;
+  const maxTagLen = 24;
   let lastTrash = null;
   let deleteRunning = false;
   let _dbPromise = null;
@@ -367,7 +378,7 @@ document.addEventListener("DOMContentLoaded", function() {
   const legacyNotesPrefix = "SimpleJot-note:";
   const legacyRecoveryPrefix = "SimpleJot-recovery:";
   const legacyIdbName = "SimpleJot";
-  const brandSingleKeys = ["pins", "meta", "trash-v1", "lastBackup", "current", "settings", "settings-fs", "settings-lh", "settings-lw", "settings-font", "sort", "theme", "seen"];
+  const brandSingleKeys = ["pins", "meta", "tagList", "tags", "trash-v1", "lastBackup", "current", "settings", "settings-fs", "settings-lh", "settings-lw", "settings-font", "sort", "theme", "seen"];
   function migrateBrandKeys() {
     try {
       brandSingleKeys.forEach(function(suffix) {
@@ -429,6 +440,105 @@ document.addEventListener("DOMContentLoaded", function() {
     meta[name] = Date.now();
     saveMeta();
   }
+
+  let allTags = [];
+  let noteTags = {};
+
+  try {
+    allTags = JSON.parse(safeGet(tagListKey) || "[]");
+    if (!Array.isArray(allTags)) allTags = [];
+  } catch (err) {
+    allTags = [];
+  }
+
+  try {
+    noteTags = JSON.parse(safeGet(noteTagKey) || "{}");
+    if (!noteTags || typeof noteTags !== "object" || Array.isArray(noteTags)) noteTags = {};
+  } catch (err) {
+    noteTags = {};
+  }
+
+  function hasOwn(obj, key) {
+    return Object.prototype.hasOwnProperty.call(obj, key);
+  }
+
+  function safeTagName(value) {
+    return String(value === null || value === undefined ? "" : value).replace(/[\u0000-\u001f\u007f]+/g, " ").replace(/\s+/g, " ").trim().slice(0, maxTagLen);
+  }
+
+  allTags = allTags.map(safeTagName).filter(function(t) { return t !== ""; }).slice(0, maxTags);
+
+  function saveTagStore() {
+    safeSet(tagListKey, JSON.stringify(allTags.slice(0, maxTags)));
+    safeSet(noteTagKey, JSON.stringify(noteTags));
+  }
+
+  function tagsFor(name) {
+    if (!name || !hasOwn(noteTags, name)) return [];
+    const list = noteTags[name];
+    if (!Array.isArray(list)) return [];
+    return list.map(safeTagName).filter(function(t) { return t !== ""; }).slice(0, maxTags);
+  }
+
+  function registerTag(tag) {
+    const clean = safeTagName(tag);
+    if (clean === "") return "";
+    for (let i = 0; i < allTags.length; i++) {
+      if (allTags[i].toLowerCase() === clean.toLowerCase()) return allTags[i];
+    }
+    if (allTags.length >= maxTags) return "";
+    allTags.push(clean);
+    return clean;
+  }
+
+  function setNoteTags(name, tags) {
+    if (!name || isReservedName(name)) return;
+    const clean = [];
+    (tags || []).forEach(function(t) {
+      const tag = registerTag(t);
+      if (tag !== "" && clean.indexOf(tag) === -1) clean.push(tag);
+    });
+    if (clean.length) noteTags[name] = clean;
+    else delete noteTags[name];
+    saveTagStore();
+  }
+
+  function everyTag() {
+    const seen = Object.create(null);
+    const out = [];
+    const push = function(t) {
+      const clean = safeTagName(t);
+      if (clean === "" || seen[clean.toLowerCase()]) return;
+      seen[clean.toLowerCase()] = true;
+      out.push(clean);
+    };
+    allTags.forEach(push);
+    Object.keys(noteTags).forEach(function(n) {
+      if (Array.isArray(noteTags[n])) noteTags[n].forEach(push);
+    });
+    return out.sort(function(a, b) { return a.localeCompare(b); });
+  }
+
+  function moveNoteTags(oldName, newName) {
+    if (!oldName || !newName || oldName === newName) return;
+    if (!hasOwn(noteTags, oldName)) return;
+    noteTags[newName] = noteTags[oldName];
+    delete noteTags[oldName];
+    saveTagStore();
+  }
+
+  function removeTagEverywhere(tag) {
+    const lower = safeTagName(tag).toLowerCase();
+    if (lower === "") return;
+    allTags = allTags.filter(function(t) { return t.toLowerCase() !== lower; });
+    Object.keys(noteTags).forEach(function(n) {
+      const kept = (Array.isArray(noteTags[n]) ? noteTags[n] : []).filter(function(t) { return safeTagName(t).toLowerCase() !== lower; });
+      if (kept.length) noteTags[n] = kept;
+      else delete noteTags[n];
+    });
+    saveTagStore();
+  }
+
   function mirrorPut(n, v) { v = v || ""; if (!n) return; if (v.length > mirrorLimit) { safeRemove(notesPrefix + n); return; } safeSet(notesPrefix + n, v); }
   function mirrorDel(n) { safeRemove(notesPrefix + n); }
   function prefixScan(p) { const o = {}; try { for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k && k.indexOf(p) === 0) o[k.slice(p.length)] = localStorage.getItem(k) || ""; } } catch (err) {} Object.keys(mem).forEach(function(k) { if (k.indexOf(p) === 0) { const n = k.slice(p.length); if (!(n in o)) o[n] = mem[k]; } }); return o; }
@@ -436,11 +546,11 @@ document.addEventListener("DOMContentLoaded", function() {
   function recoveryAll() { return prefixScan(recoveryPrefix); }
   function getTrash() { try { const t = JSON.parse(safeGet(trashKey) || "[]"); return Array.isArray(t) ? t : []; } catch (err) { return []; } }
   function setTrash(t) { safeSet(trashKey, JSON.stringify((t || []).slice(0, trashMax))); try { trashCount.textContent = String(getTrash().length); } catch (err) {} renderTrash(); }
-  function pushTrash(o) { const t = getTrash(); t.unshift({ name: o.name, value: o.value, pin: !!o.pin, updated: o.updated || 0, deletedAt: Date.now() }); setTrash(t.filter(function(x) { return Date.now() - (x.deletedAt || 0) < trashDays * 864e5; }).slice(0, trashMax)); lastTrash = o; }
+  function pushTrash(o) { const t = getTrash(); const rec = { name: o.name, value: o.value, pin: !!o.pin, updated: o.updated || 0, tags: tagsFor(o.name), deletedAt: Date.now() }; t.unshift(rec); setTrash(t.filter(function(x) { return Date.now() - (x.deletedAt || 0) < trashDays * 864e5; }).slice(0, trashMax)); lastTrash = rec; }
   function pruneTrash() { setTrash(getTrash().filter(function(x) { return Date.now() - (x.deletedAt || 0) < trashDays * 864e5; })); }
   function markBackup() { safeSet(backupKey, String(Date.now())); }
   function needBackup() { const t = parseInt(safeGet(backupKey) || "0", 10) || 0; return Date.now() - t > backupDays * 864e5; }
-  function opfsBackup(n) { try { if (!navigator.storage || !navigator.storage.getDirectory) return Promise.resolve(); return navigator.storage.getDirectory().then(function(d) { return d.getFileHandle("textcove-backup.json", { create: true }); }).then(function(h) { return h.createWritable().then(function(w) { return w.write(JSON.stringify({ version: noteExportVersion, exportedAt: new Date().toISOString(), notes: n })).then(function() { return w.close(); }); }).catch(function() {}); }).catch(function() {}); } catch (err) { return Promise.resolve(); } }
+  function opfsBackup(n) { try { if (!navigator.storage || !navigator.storage.getDirectory) return Promise.resolve(); return navigator.storage.getDirectory().then(function(d) { return d.getFileHandle("textcove-backup.json", { create: true }); }).then(function(h) { return h.createWritable().then(function(w) { return w.write(JSON.stringify({ version: noteExportVersion, exportedAt: new Date().toISOString(), notes: n, tags: allTags, noteTags: noteTags })).then(function() { return w.close(); }); }).catch(function() {}); }).catch(function() {}); } catch (err) { return Promise.resolve(); } }
   function refreshStoreStatus() { try { if (!navigator.storage || !navigator.storage.estimate) { try { storeStatus.textContent = "Saved on this device"; } catch (err) {} return; } navigator.storage.estimate().then(function(e) { const q = e.quota || 0, l = q - (e.usage || 0); const s = q ? (l > 1073741824 ? (l / 1073741824).toFixed(1) + "GB" : Math.max(1, Math.round(l / 1048576)) + "MB") : ""; try { storeStatus.textContent = s ? "Saved on this device, " + s + " free" : "Saved on this device"; } catch (err) {} if (q && l < 104857600) markError("Running low on space, export soon"); }).catch(function() {}); } catch (err) {} }
   function initPersist() { try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(function() {}); } catch (err) {} refreshStoreStatus(); }
   function stashPrev() { const pn = currentNote, pv = content.value; if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; } if (!pn || shownNote !== pn) return Promise.resolve(); return idbPut(pn, pv).then(function() { clearRecovery(pn); }).catch(function() { safeSet(recoveryPrefix + pn, pv); mirrorPut(pn, pv); }); }
@@ -467,6 +577,10 @@ document.addEventListener("DOMContentLoaded", function() {
     if (meta[name] !== undefined) {
       delete meta[name];
       saveMeta();
+    }
+    if (hasOwn(noteTags, name)) {
+      delete noteTags[name];
+      saveTagStore();
     }
   }
 
@@ -922,16 +1036,218 @@ document.addEventListener("DOMContentLoaded", function() {
     return firstLine === "" ? "Empty note" : firstLine;
   }
 
+  function renderTagOptions() {
+    if (!tagFilter) return;
+    const current = tagFilter.value;
+    const tags = everyTag();
+    tagFilter.innerHTML = "";
+    const any = document.createElement("option");
+    any.value = "";
+    any.textContent = "All tags";
+    tagFilter.appendChild(any);
+    tags.forEach(function(tag) {
+      const opt = document.createElement("option");
+      opt.value = tag;
+      const count = Object.keys(noteTags).filter(function(n) { return tagsFor(n).indexOf(tag) !== -1; }).length;
+      opt.textContent = tag + " (" + count + ")";
+      tagFilter.appendChild(opt);
+    });
+    tagFilter.value = tags.indexOf(current) !== -1 ? current : "";
+  }
+
+  function renderTagChips() {
+    if (!tagChips) return;
+    try {
+      if (tagMenuNote) tagMenuNote.textContent = "Tags for " + (currentNote || "New note");
+      const mine = tagsFor(currentNote);
+      tagChips.innerHTML = "";
+      mine.forEach(function(tag) {
+        const chip = document.createElement("span");
+        chip.className = "tag-chip";
+        const label = document.createElement("span");
+        label.className = "tag-chip-label";
+        label.textContent = tag;
+        const rm = document.createElement("button");
+        rm.className = "tag-chip-remove";
+        rm.setAttribute("data-tag", tag);
+        rm.setAttribute("aria-label", "Remove tag " + tag);
+        rm.textContent = "\u00d7";
+        rm.addEventListener("click", function() {
+          toggleCurrentTag(this.getAttribute("data-tag"));
+        });
+        chip.appendChild(label);
+        chip.appendChild(rm);
+        tagChips.appendChild(chip);
+      });
+    } catch (err) {}
+  }
+
+  function renderTagMenu() {
+    if (!tagList) return;
+    try {
+      if (tagMenuNote) tagMenuNote.textContent = "Tags for " + (currentNote || "New note");
+      const mine = tagsFor(currentNote);
+      const tags = everyTag();
+      tagList.innerHTML = "";
+      if (!tags.length) {
+        const empty = document.createElement("li");
+        empty.className = "notes-empty";
+        empty.textContent = "No tags yet. Type a name above to create one.";
+        tagList.appendChild(empty);
+        return;
+      }
+      tags.forEach(function(tag) {
+        const li = document.createElement("li");
+        const on = mine.indexOf(tag) !== -1;
+        const toggle = document.createElement("button");
+        toggle.className = "tag-toggle" + (on ? " is-on" : "");
+        toggle.setAttribute("data-tag", tag);
+        toggle.setAttribute("aria-pressed", on ? "true" : "false");
+        toggle.setAttribute("aria-label", (on ? "Remove tag " : "Add tag ") + tag);
+        toggle.textContent = (on ? "\u2713 " : "+ ") + tag;
+        toggle.addEventListener("click", function() {
+          toggleCurrentTag(this.getAttribute("data-tag"));
+        });
+        const remove = document.createElement("button");
+        remove.className = "tag-remove";
+        remove.setAttribute("data-tag", tag);
+        remove.setAttribute("aria-label", "Delete tag " + tag);
+        remove.title = "Delete this tag from every note";
+        remove.textContent = "\u00d7";
+        remove.addEventListener("click", function() {
+          deleteTagEverywhere(this.getAttribute("data-tag"));
+        });
+        li.appendChild(toggle);
+        li.appendChild(remove);
+        tagList.appendChild(li);
+      });
+    } catch (err) {}
+  }
+
+  function noteTagTarget() {
+    if (currentNote) return Promise.resolve(currentNote);
+    return ensureCurrentNote();
+  }
+
+  function toggleCurrentTag(tag) {
+    const clean = safeTagName(tag);
+    if (clean === "") return;
+    noteTagTarget().then(function(name) {
+      const list = tagsFor(name).slice();
+      const i = list.indexOf(clean);
+      if (i === -1) list.push(clean);
+      else list.splice(i, 1);
+      setNoteTags(name, list);
+      refreshTagUI();
+    }).catch(function() {});
+  }
+
+  function hideSuggestions() {
+    if (!tagSuggestions) return;
+    tagSuggestions.hidden = true;
+    tagSuggestions.innerHTML = "";
+    suggestIndex = -1;
+  }
+
+  function showSuggestions(query) {
+    if (!tagSuggestions || !tagInput) return;
+    const mine = tagsFor(currentNote);
+    const all = everyTag();
+    const q = query.toLowerCase();
+    const matches = all.filter(function(t) {
+      return t.toLowerCase().indexOf(q) !== -1 && mine.indexOf(t) === -1;
+    }).slice(0, 8);
+    tagSuggestions.innerHTML = "";
+    suggestIndex = -1;
+    if (!matches.length || q === "") {
+      tagSuggestions.hidden = true;
+      return;
+    }
+    matches.forEach(function(tag, idx) {
+      const item = document.createElement("div");
+      item.className = "tag-suggest-item";
+      item.setAttribute("data-tag", tag);
+      item.setAttribute("data-index", String(idx));
+      item.textContent = tag;
+      item.addEventListener("mousedown", function(e) {
+        e.preventDefault();
+        applySuggestedTag(this.getAttribute("data-tag"));
+      });
+      tagSuggestions.appendChild(item);
+    });
+    tagSuggestions.hidden = false;
+  }
+
+  function applySuggestedTag(tag) {
+    noteTagTarget().then(function(name) {
+      const list = tagsFor(name).slice();
+      if (list.indexOf(tag) === -1) list.push(tag);
+      setNoteTags(name, list);
+      if (tagInput) tagInput.value = "";
+      hideSuggestions();
+      refreshTagUI();
+    }).catch(function() {});
+  }
+
+  function addCurrentTag() {
+    if (!tagInput) return;
+    const typed = safeTagName(tagInput.value);
+    if (typed === "") return;
+    const existing = everyTag().filter(function(t) { return t.toLowerCase() === typed.toLowerCase(); })[0];
+    const tag = registerTag(existing || typed);
+    if (tag === "") {
+      showAlert("Tag limit reached (" + maxTags + "). Delete a tag you no longer need and try again.");
+      return;
+    }
+    tagInput.value = "";
+    hideSuggestions();
+    noteTagTarget().then(function(name) {
+      const list = tagsFor(name).slice();
+      if (list.indexOf(tag) === -1) list.push(tag);
+      setNoteTags(name, list);
+      refreshTagUI();
+    }).catch(function() {});
+  }
+
+  function deleteTagEverywhere(tag) {
+    const clean = safeTagName(tag);
+    if (clean === "") return;
+    const usage = Object.keys(noteTags).filter(function(n) { return tagsFor(n).indexOf(clean) !== -1; }).length;
+    const label = usage === 1 ? "1 note" : usage + " notes";
+    showConfirm("Delete the tag \u201c" + clean + "\u201d from " + label + "?", { ok: "YES", cancel: "NO" }).then(function(yes) {
+      if (!yes) return;
+      removeTagEverywhere(clean);
+      renderTagOptions();
+      refreshTagUI();
+      setStatus("saved", "Deleted tag \u201c" + clean + "\u201d");
+    });
+  }
+
+  function refreshTagUI() {
+    renderTagChips();
+    renderTagMenu();
+    renderNoteList();
+  }
+
   function renderNoteList() {
+    renderTagOptions();
+    renderTagMenu();
     const q = searchInput ? searchInput.value.trim().toLowerCase() : "";
+    const activeTag = tagFilter ? tagFilter.value : "";
     const myToken = ++listToken;
     const paint = function(all) {
       if (myToken !== listToken) return;
       noteList.innerHTML = "";
       let names = sortedNames(getNoteNames());
+      if (activeTag !== "") {
+        names = names.filter(function(n) {
+          return tagsFor(n).indexOf(activeTag) !== -1;
+        });
+      }
       if (q !== "") {
         names = names.filter(function(n) {
           if (n.toLowerCase().indexOf(q) !== -1) return true;
+          if (tagsFor(n).some(function(t) { return t.toLowerCase().indexOf(q) !== -1; })) return true;
           const body = (n === currentNote) ? content.value : (all[n] || "");
           if (String(body).length > loadSafeLimit) return false;
           const hay = String(body).length > 50000 ? String(body).slice(0, 50000) : String(body);
@@ -941,13 +1257,13 @@ document.addEventListener("DOMContentLoaded", function() {
       if (!names.length) {
         const empty = document.createElement("li");
         empty.className = "notes-empty";
-        empty.textContent = q ? "No notes match your search." : "No notes yet.";
+        empty.textContent = q ? "No notes match your search." : (activeTag !== "" ? "No notes with this tag." : "No notes yet.");
         noteList.appendChild(empty);
         return;
       }
       names.forEach(function(name) {
         const li = document.createElement("li");
-        if (name === currentNote) li.className = "note--current";
+        li.className = "note-row" + (name === currentNote ? " note--current" : "");
         const main = document.createElement("button");
         main.className = "note-open";
         main.setAttribute("data-note", name);
@@ -996,9 +1312,29 @@ document.addEventListener("DOMContentLoaded", function() {
         delBtn.addEventListener("click", function(e) {
           trashNote(this.getAttribute("data-note"), !!(e && e.shiftKey));
         });
+        const noteTagList = tagsFor(name);
         li.appendChild(main);
         li.appendChild(pinBtn);
         li.appendChild(delBtn);
+        if (noteTagList.length) {
+          const tagRow = document.createElement("div");
+          tagRow.className = "note-tags";
+          noteTagList.forEach(function(tag) {
+            const chip = document.createElement("button");
+            chip.className = "note-tag";
+            chip.setAttribute("data-tag", tag);
+            chip.setAttribute("aria-label", "Filter notes by tag " + tag);
+            chip.textContent = tag;
+            chip.addEventListener("click", function(e) {
+              if (e && e.stopPropagation) e.stopPropagation();
+              if (!tagFilter) return;
+              tagFilter.value = tag;
+              renderNoteList();
+            });
+            tagRow.appendChild(chip);
+          });
+          li.appendChild(tagRow);
+        }
         noteList.appendChild(li);
       });
     };
@@ -1093,7 +1429,7 @@ document.addEventListener("DOMContentLoaded", function() {
     moveNoteToTrash(name);
   }
   function renderTrash() { try { if (!trashList) return; const t = getTrash(); if (trashCount) trashCount.textContent = String(t.length); trashList.innerHTML = ""; t.forEach(function(x, i) { const li = document.createElement("li"); li.className = "trash-row"; const b = document.createElement("span"); b.className = "note-name"; b.textContent = x.name; const r = document.createElement("button"); r.className = "trash-restore"; r.textContent = "Restore"; r.setAttribute("aria-label", "Restore " + x.name); r.addEventListener("click", function() { restoreTrash(i); }); const d = document.createElement("button"); d.className = "note-delete"; d.textContent = "\u00d7"; d.setAttribute("aria-label", "Delete forever " + x.name); d.addEventListener("click", function() { wipeTrash(i); }); li.appendChild(b); li.appendChild(r); li.appendChild(d); trashList.appendChild(li); }); if (trashEmpty) trashEmpty.style.display = t.length ? "" : "none"; } catch (err) {} }
-  function restoreTrash(i) { const t = getTrash(), x = t[i]; if (!x) return Promise.resolve(false); const target = getNoteNames().indexOf(x.name) !== -1 ? reserveName(x.name) : x.name; if (namesCache.indexOf(target) === -1) namesCache.push(target); return idbPut(target, x.value).then(function() { if (x.pin && pins.indexOf(target) === -1) { pins.push(target); savePins(); } if (x.updated) { meta[target] = x.updated; saveMeta(); } t.splice(i, 1); setTrash(t); if (lastTrash && lastTrash.name === x.name && lastTrash.value === x.value) lastTrash = null; if (!currentNote) return openNote(target); renderNoteList(); setStatus("saved", "Restored \u201c" + target + "\u201d"); return true; }).catch(function() { showAlert("Restore failed. Storage may be full."); return false; }); }
+  function restoreTrash(i) { const t = getTrash(), x = t[i]; if (!x) return Promise.resolve(false); const target = getNoteNames().indexOf(x.name) !== -1 ? reserveName(x.name) : x.name; if (namesCache.indexOf(target) === -1) namesCache.push(target); return idbPut(target, x.value).then(function() { if (x.pin && pins.indexOf(target) === -1) { pins.push(target); savePins(); } if (x.updated) { meta[target] = x.updated; saveMeta(); } if (Array.isArray(x.tags) && x.tags.length) setNoteTags(target, x.tags); t.splice(i, 1); setTrash(t); if (lastTrash && lastTrash.name === x.name && lastTrash.value === x.value) lastTrash = null; if (!currentNote) return openNote(target); renderNoteList(); setStatus("saved", "Restored \u201c" + target + "\u201d"); return true; }).catch(function() { showAlert("Restore failed. Storage may be full."); return false; }); }
   function wipeTrash(i) { const t = getTrash(), x = t[i]; showConfirm("Delete \u201c" + (x ? x.name : "") + "\u201d forever?", { ok: "YES", cancel: "NO" }).then(function(yes) { if (!yes) return; const n = getTrash(); n.splice(i, 1); setTrash(n); if (lastTrash && x && lastTrash.name === x.name && lastTrash.value === x.value) lastTrash = null; }); }
 
   function migrateFromLocalStorage() {
@@ -1270,6 +1606,8 @@ document.addEventListener("DOMContentLoaded", function() {
     }
     const noteObj = data.notes;
     let importedCount = 0;
+    if (Array.isArray(data.tags)) data.tags.forEach(function(t) { registerTag(t); });
+    const importedTags = data.noteTags && typeof data.noteTags === "object" && !Array.isArray(data.noteTags) ? data.noteTags : {};
     const keys = Object.keys(noteObj).slice(0, maxImportNotes);
     if (Object.keys(noteObj).length > maxImportNotes) {
       showAlert("Backup has too many notes. Only the first " + maxImportNotes + " will be imported.");
@@ -1287,7 +1625,10 @@ document.addEventListener("DOMContentLoaded", function() {
         } else {
           noteName = reserveName(defaultNoteBase);
         }
-        return idbPut(noteName, value).then(function() { importedCount++; });
+        return idbPut(noteName, value).then(function() {
+          importedCount++;
+          if (hasOwn(importedTags, key) && Array.isArray(importedTags[key])) setNoteTags(noteName, importedTags[key]);
+        });
       });
     });
     chain.then(function() {
@@ -1387,7 +1728,7 @@ document.addEventListener("DOMContentLoaded", function() {
       return notes;
     }).then(function(notes) {
       if (!notes) return;
-      const exportObj = { version: noteExportVersion, exportedAt: new Date().toISOString(), notes: notes };
+      const exportObj = { version: noteExportVersion, exportedAt: new Date().toISOString(), notes: notes, tags: allTags, noteTags: noteTags };
       downloadBlob(new Blob([JSON.stringify(exportObj, null, 2)], { type: "application/json;charset=utf-8" }), "textcove-export-" + Date.now() + ".json");
       markBackup(); opfsBackup(notes); refreshStoreStatus();
     }).catch(function(err) {
@@ -1421,6 +1762,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
   function applyRename(oldName, newName, val) {
     if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
+    moveNoteTags(oldName, newName);
     currentNote = newName; shownNote = newName;
     safeSet("TextCove-current", newName);
     title.value = newName;
@@ -1437,6 +1779,7 @@ document.addEventListener("DOMContentLoaded", function() {
       if (isQuotaError(err)) {
         markError("Save failed: storage is full");
         showAlert("Storage is full, so the note could not be renamed.");
+        moveNoteTags(newName, oldName);
         currentNote = oldName; shownNote = oldName || "";
         title.value = oldName || "";
         safeSet("TextCove-current", oldName || "");
@@ -1501,6 +1844,7 @@ document.addEventListener("DOMContentLoaded", function() {
     return idbPut(target, t.value).then(function() {
       if (t.pin && pins.indexOf(target) === -1) { pins.push(target); savePins(); }
       if (t.updated) { meta[target] = t.updated; saveMeta(); }
+      if (Array.isArray(t.tags) && t.tags.length) setNoteTags(target, t.tags);
       if (idx !== -1) { bin.splice(idx, 1); setTrash(bin); }
       lastTrash = null;
       if (!currentNote) return openNote(target);
@@ -1789,6 +2133,7 @@ document.addEventListener("DOMContentLoaded", function() {
         unnamed.forEach(function(bad) {
           chain = chain.then(function() {
             const fixedName = reserveName(defaultNoteBase);
+            moveNoteTags(bad, fixedName);
             return idbGet(bad).then(function(v) {
               return idbPut(fixedName, v || "").then(function() { return idbDel(bad); }).then(function() {
                 if (safeGet("TextCove-current") === bad) safeSet("TextCove-current", fixedName);
@@ -2003,6 +2348,47 @@ document.addEventListener("DOMContentLoaded", function() {
     settings.classList.remove("settings-btn--active");
     refreshNames().then(renderNoteList).catch(renderNoteList);
   });
+
+  if (tagFilter) tagFilter.addEventListener("change", function() {
+    renderNoteList();
+  });
+
+  if (tagInput) {
+    tagInput.addEventListener("input", function() {
+      showSuggestions(this.value.trim());
+    });
+    tagInput.addEventListener("keydown", function(e) {
+      if (!tagSuggestions || tagSuggestions.hidden) {
+        if (e.key === "Enter" || e.key === ",") {
+          e.preventDefault();
+          addCurrentTag();
+        }
+        return;
+      }
+      const items = tagSuggestions.querySelectorAll(".tag-suggest-item");
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        suggestIndex = Math.min(suggestIndex + 1, items.length - 1);
+        items.forEach(function(el, i) { el.classList.toggle("is-active", i === suggestIndex); });
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        suggestIndex = Math.max(suggestIndex - 1, 0);
+        items.forEach(function(el, i) { el.classList.toggle("is-active", i === suggestIndex); });
+      } else if (e.key === "Enter" || e.key === ",") {
+        e.preventDefault();
+        if (suggestIndex >= 0 && items[suggestIndex]) {
+          applySuggestedTag(items[suggestIndex].getAttribute("data-tag"));
+        } else {
+          addCurrentTag();
+        }
+      } else if (e.key === "Escape") {
+        hideSuggestions();
+      }
+    });
+    tagInput.addEventListener("blur", function() {
+      setTimeout(hideSuggestions, 150);
+    });
+  }
 
   newNote.addEventListener("click", createNewNote);
 
