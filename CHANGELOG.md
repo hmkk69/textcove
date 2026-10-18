@@ -10,6 +10,7 @@ Dates follow the project commit history.
 ## 2026-10-17
 
 - Feature: tags you can create, assign and split across notes. The tag editor lives inside the notes menu: type a name to add it to the current note, tap a tag to toggle it on that note, and use the dropdown or the tag chips under each note to filter the list. Deleting a tag asks first and removes it everywhere. Tags survive rename, trash and restore, import and export, and the device backup.
+- UX: markdown hint is reactive, animating to show the syntax for the element at the cursor.
 
 ## 2026-10-16
 
