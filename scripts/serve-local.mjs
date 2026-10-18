@@ -21,7 +21,6 @@ async function claimLock() {
     try { oldPid = parseInt(fs.readFileSync(lockFile, "utf8").trim(), 10) || 0; } catch (err) { oldPid = 0; }
     if (oldPid && isAlive(oldPid)) {
       console.log("Another dev server is already running (PID " + oldPid + "). Asking it to step down...");
-      // Try graceful HTTP shutdown first.
       try {
         await new Promise((resolve) => {
           const req = http.get("http://127.0.0.1:" + port + "/__textcove_shutdown", (r) => { r.resume(); r.on("end", resolve); });
@@ -33,7 +32,6 @@ async function claimLock() {
         await sleep(100);
         if (!isAlive(oldPid)) break;
       }
-      // Fallback: force kill if still alive.
       if (isAlive(oldPid)) {
         try { process.kill(oldPid); } catch (err) {}
         await sleep(300);

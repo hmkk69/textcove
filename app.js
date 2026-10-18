@@ -2609,7 +2609,6 @@ document.addEventListener("DOMContentLoaded", function() {
     else home.classList.remove("active");
   } catch (err) {}
 
-  // Custom tooltip (YouTube-style) for elements carrying title/data-tooltip.
   const appTooltip = document.getElementById("appTooltip");
   let tooltipTimer = null;
   let tooltipTarget = null;
@@ -2773,9 +2772,7 @@ document.addEventListener("DOMContentLoaded", function() {
       if (e.target === mdHint || e.target.tagName === "SPAN") dismissMdHint();
     });
   }
-  // also re-evaluate when preview toggles
   const _togglePreviewOrig = togglePreview;
-  // wrap not needed; updateMdHint called via input. Call once after load.
   setTimeout(updateMdHint, 1000);
 
   try { window.addEventListener("resize", function() { applyLayout(); if (previewOpen) refreshPreview(); }); } catch (err) {}
