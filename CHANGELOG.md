@@ -3,13 +3,18 @@
 All notable changes to TextCove are documented here, newest first.
 Dates follow the project commit history.
 
+## 2026-10-18
+
+- UX: deleting an empty note now warns that it will be deleted permanently, with a "Don't remind me next time & delete" button that disables the notice for good.
+
 ## 2026-10-17
 
 - Feature: tags you can create, assign and split across notes. The tag editor lives inside the notes menu: type a name to add it to the current note, tap a tag to toggle it on that note, and use the dropdown or the tag chips under each note to filter the list. Deleting a tag asks first and removes it everywhere. Tags survive rename, trash and restore, import and export, and the device backup.
 
+## 2026-10-16
+
 - UX: editor font picker in settings with IBM Plex Mono (Recommended), System Mono, Consolas/Menlo, System Sans and Georgia Serif; applies to editor plus preview, saved per device and covered by reset.
 - UX: empty notes delete normally when more than one note exists; the "empty note" notice plus Shift-click hint only shows for the last remaining note.
-- UX: deleting an empty note now warns that it will be deleted permanently, with a "Don't remind me next time" button that disables the notice for good.
 - UX: added a user-friendly Changelog page, info dialog links to it instead of the raw markdown; `CHANGELOG.md` stays in git but stays hidden on the live Vercel site.
 
 ## 2026-10-15
