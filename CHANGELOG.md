@@ -3,6 +3,8 @@
 All notable changes to TextCove are documented here, newest first.
 Dates follow the project commit history.
 
+## Hmkkk69's contributions (hmkk69's contributions and commits)
+
 ## 2026-10-18
 
 - UX: deleting an empty note now warns that it will be deleted permanently, with a "Don't remind me next time & delete" button that disables the notice for good.
@@ -52,7 +54,9 @@ Dates follow the project commit history.
 
 ## 2026-10-07
 
-- Ownership transferred from 2nul to hmkk69; repo links and site domain updated (`tc.hmkkk.qzz.io`).
+- **Breaking:** Ownership transferred from 2nul to hmkk69; repo links and site domain updated (`tc.hmkkk.qzz.io`).
+
+## 2nul's contributions (2nul's commits and contributions)
 
 ## 2026-10-04
 
