@@ -1347,7 +1347,7 @@ html.night #theme:hover svg {
   border: 2px solid #383838;
   border-radius: 14px;
   padding: 1.5em;
-  max-width: min(24em, calc(100vw - 2em));
+  max-width: min(30em, calc(100vw - 2em));
   width: 100%;
   background: #fff;
   color: #383838;
@@ -1405,6 +1405,7 @@ html.night #theme:hover svg {
   display: flex;
   justify-content: center;
   gap: .5em;
+  flex-wrap: wrap;
 }
 
 .dialog-actions button {
@@ -1412,8 +1413,10 @@ html.night #theme:hover svg {
   border: 2px solid #383838;
   color: #383838;
   min-width: 5em;
-  padding: .5em;
+  padding: .5em .75em;
   transition: background 180ms ease, transform 180ms var(--ease-out);
+  white-space: normal;
+  line-height: 1.2;
 }
 
 .dialog-actions button:hover {
@@ -1432,6 +1435,11 @@ html.night #theme:hover svg {
 
 .night .dialog-actions button:hover {
   background: rgba(160, 217, 46, .2);
+}
+
+#dialogDontRemind {
+  max-width: 13em;
+  font-size: .85em;
 }
 
 #fileName,

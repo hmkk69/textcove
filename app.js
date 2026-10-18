@@ -176,7 +176,7 @@ document.addEventListener("DOMContentLoaded", function() {
       if (dialogDontRemind) {
         if (opts.dontRemind) {
           dialogDontRemind.style.display = "";
-          dialogDontRemind.textContent = opts.dontRemindLabel || "Don't remind me next time";
+          dialogDontRemind.textContent = opts.dontRemindLabel || "Don't remind me next time & delete";
         } else {
           dialogDontRemind.style.display = "none";
         }
@@ -209,7 +209,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
   function showConfirm(message, options) {
     const opts = options || {};
-    return openDialog("confirm", message, { ok: opts.ok || "YES", cancel: opts.cancel || "NO", dontRemind: !!opts.dontRemind, dontRemindLabel: opts.dontRemindLabel || "Don't remind me next time" });
+    return openDialog("confirm", message, { ok: opts.ok || "YES", cancel: opts.cancel || "NO", dontRemind: !!opts.dontRemind, dontRemindLabel: opts.dontRemindLabel || "Don't remind me next time & delete" });
   }
 
   function showPrompt(message, defaultValue, okLabel) {
@@ -1399,7 +1399,7 @@ document.addEventListener("DOMContentLoaded", function() {
           return null;
         }
         if (!skipEmptyDeleteNotice) {
-          return showConfirm("This note is empty, so it will be permanently deleted.", { ok: "Delete", cancel: "Cancel", dontRemind: true, dontRemindLabel: "Don't remind me next time" }).then(function(ok) {
+          return showConfirm("This note is empty, so it will be permanently deleted.", { ok: "Delete", cancel: "Cancel", dontRemind: true, dontRemindLabel: "Don't remind me next time & delete" }).then(function(ok) {
             if (!ok) {
               deleteRunning = false;
               renderNoteList();
@@ -2366,7 +2366,7 @@ document.addEventListener("DOMContentLoaded", function() {
       return;
     }
     if (content.value === "" && !skipEmptyDeleteNotice) {
-      showConfirm("This note is empty, so it will be permanently deleted.", { ok: "Delete", cancel: "Cancel", dontRemind: true, dontRemindLabel: "Don't remind me next time" }).then(function(ok) {
+      showConfirm("This note is empty, so it will be permanently deleted.", { ok: "Delete", cancel: "Cancel", dontRemind: true, dontRemindLabel: "Don't remind me next time & delete" }).then(function(ok) {
         if (ok) clearCurrentNote();
       });
       return;

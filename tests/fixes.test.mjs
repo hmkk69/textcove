@@ -62,7 +62,7 @@ describe("empty note delete notice", () => {
   });
   it("offers a don't remind again button", () => {
     assert.ok(html.includes('id="dialogDontRemind"'), "missing don't remind button");
-    assert.ok(app.includes("Don't remind me next time"), "missing don't remind label");
+    assert.ok(app.includes("Don't remind me next time & delete"), "missing don't remind label");
     assert.ok(app.includes("skipEmptyDeleteNotice"), "missing opt-out flag");
   });
   it("skips the notice once dismissed", () => {
