@@ -64,6 +64,7 @@ document.addEventListener("DOMContentLoaded", function() {
   const dialogInput = document.getElementById("dialogInput");
   const dialogOk = document.getElementById("dialogOk");
   const dialogCancel = document.getElementById("dialogCancel");
+  const dialogDontRemind = document.getElementById("dialogDontRemind");
   const installTip = document.getElementById("installTip");
 
   let deferredInstall = null;
@@ -172,6 +173,14 @@ document.addEventListener("DOMContentLoaded", function() {
       dialogMessage.textContent = message;
       dialogOk.textContent = opts.ok || "OK";
       dialogCancel.textContent = opts.cancel || "Cancel";
+      if (dialogDontRemind) {
+        if (opts.dontRemind) {
+          dialogDontRemind.style.display = "";
+          dialogDontRemind.textContent = opts.dontRemindLabel || "Don't remind me next time";
+        } else {
+          dialogDontRemind.style.display = "none";
+        }
+      }
       dialog.setAttribute("data-mode", mode);
       if (mode === "prompt") {
         dialogInput.style.display = "";
@@ -198,8 +207,9 @@ document.addEventListener("DOMContentLoaded", function() {
     return openDialog("alert", message, { ok: "OK" });
   }
 
-  function showConfirm(message) {
-    return openDialog("confirm", message, { ok: "YES", cancel: "NO" });
+  function showConfirm(message, options) {
+    const opts = options || {};
+    return openDialog("confirm", message, { ok: opts.ok || "YES", cancel: opts.cancel || "NO", dontRemind: !!opts.dontRemind, dontRemindLabel: opts.dontRemindLabel || "Don't remind me next time" });
   }
 
   function showPrompt(message, defaultValue, okLabel) {
@@ -219,6 +229,14 @@ document.addEventListener("DOMContentLoaded", function() {
     const mode = dialog.getAttribute("data-mode");
     finishDialog(mode === "prompt" ? null : false);
   });
+  if (dialogDontRemind) {
+    dialogDontRemind.addEventListener("click", function(e) {
+      e.preventDefault();
+      skipEmptyDeleteNotice = true;
+      safeSet("TextCove-skip-empty-delete-notice", "1");
+      finishDialog(true);
+    });
+  }
 
   dialog.addEventListener("cancel", function() {
     const mode = dialog.getAttribute("data-mode");
@@ -240,7 +258,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
   dialog.addEventListener("keydown", function(e) {
     if (e.key !== "Tab") return;
-    const items = [dialogInput, dialogOk, dialogCancel].filter(function(el) {
+    const items = [dialogInput, dialogOk, dialogCancel, dialogDontRemind].filter(function(el) {
       return el && el.style.display !== "none" && !el.disabled;
     });
     if (!items.length) return;
@@ -372,6 +390,7 @@ document.addEventListener("DOMContentLoaded", function() {
   const maxTagLen = 24;
   let lastTrash = null;
   let deleteRunning = false;
+  let skipEmptyDeleteNotice = safeGet("TextCove-skip-empty-delete-notice") === "1";
   let _dbPromise = null;
   let namesCache = [];
   let saveTimer = null;
@@ -1379,6 +1398,16 @@ document.addEventListener("DOMContentLoaded", function() {
           renderNoteList();
           return null;
         }
+        if (!skipEmptyDeleteNotice) {
+          return showConfirm("This note is empty, so it will be permanently deleted.", { ok: "Delete", cancel: "Cancel", dontRemind: true, dontRemindLabel: "Don't remind me next time" }).then(function(ok) {
+            if (!ok) {
+              deleteRunning = false;
+              renderNoteList();
+              return null;
+            }
+            return false;
+          });
+        }
         return false;
       }
       pushTrash({ name: name, value: text, pin: pins.indexOf(name) !== -1, updated: meta[name] || 0 });
@@ -2336,36 +2365,47 @@ document.addEventListener("DOMContentLoaded", function() {
       showAlert("This note is empty. Write something first, there is nothing to delete. To remove it anyway, Shift-click delete.");
       return;
     }
+    if (content.value === "" && !skipEmptyDeleteNotice) {
+      showConfirm("This note is empty, so it will be permanently deleted.", { ok: "Delete", cancel: "Cancel", dontRemind: true, dontRemindLabel: "Don't remind me next time" }).then(function(ok) {
+        if (ok) clearCurrentNote();
+      });
+      return;
+    }
+    clearCurrentNote();
+  });
+
+  function clearCurrentNote() {
+    if (deleteRunning) return;
     deleteRunning = true;
     if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
     const doomed = currentNote;
-      const doomedVal = content.value;
-      const wasPinned = doomed ? pins.indexOf(doomed) !== -1 : false;
-      const wasUpdated = doomed ? (meta[doomed] || 0) : 0;
-      const done = function() {
-        if (doomed && doomedVal !== "") {
-          pushTrash({ name: doomed, value: doomedVal, pin: wasPinned, updated: wasUpdated });
-          clearRecovery(doomed);
-        } else if (doomed) {
-          clearRecovery(doomed);
-        }
-        if (!doomed) {
-          safeRemove("TextCove-current");
-          currentNote = ""; shownNote = ""; dirty = false;
-          title.value = "";
-          content.value = "";
-          if (previewOpen && !isSplitView()) togglePreview(false);
-          updateCounters();
-          setStatus("saved", "Ready");
-          renderNoteList();
-          deleteRunning = false;
-          return;
-        }
-        return openNextAfterDelete(doomed, doomedVal !== "");
-      };
-      if (doomed) { idbDel(doomed).then(done).catch(done); }
-      else done();
-  });
+    const doomedVal = content.value;
+    const wasPinned = doomed ? pins.indexOf(doomed) !== -1 : false;
+    const wasUpdated = doomed ? (meta[doomed] || 0) : 0;
+    const done = function() {
+      if (doomed && doomedVal !== "") {
+        pushTrash({ name: doomed, value: doomedVal, pin: wasPinned, updated: wasUpdated });
+        clearRecovery(doomed);
+      } else if (doomed) {
+        clearRecovery(doomed);
+      }
+      if (!doomed) {
+        safeRemove("TextCove-current");
+        currentNote = ""; shownNote = ""; dirty = false;
+        title.value = "";
+        content.value = "";
+        if (previewOpen && !isSplitView()) togglePreview(false);
+        updateCounters();
+        setStatus("saved", "Ready");
+        renderNoteList();
+        deleteRunning = false;
+        return;
+      }
+      return openNextAfterDelete(doomed, doomedVal !== "");
+    };
+    if (doomed) { idbDel(doomed).then(done).catch(done); }
+    else done();
+  }
 
   settings.addEventListener("click", function() {
     this.classList.toggle("settings-btn--active");

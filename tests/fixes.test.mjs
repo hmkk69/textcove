@@ -55,6 +55,22 @@ describe("safe delete with undo", () => {
   });
 });
 
+describe("empty note delete notice", () => {
+  it("warns that an empty note is deleted permanently", () => {
+    assert.ok(app.includes("so it will be permanently deleted"), "missing empty delete warning");
+    assert.ok(app.includes("This note is empty"), "missing empty note message");
+  });
+  it("offers a don't remind again button", () => {
+    assert.ok(html.includes('id="dialogDontRemind"'), "missing don't remind button");
+    assert.ok(app.includes("Don't remind me next time"), "missing don't remind label");
+    assert.ok(app.includes("skipEmptyDeleteNotice"), "missing opt-out flag");
+  });
+  it("skips the notice once dismissed", () => {
+    assert.ok(app.includes("TextCove-skip-empty-delete-notice"), "notice opt-out is not persisted");
+    assert.ok(app.includes("!skipEmptyDeleteNotice"), "dismissed notice still shows");
+  });
+});
+
 describe("import and filename safety", () => {
   it("limits file size and note count", () => {
     assert.ok(app.includes("maxFileSize"), "missing size cap");
